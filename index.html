@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#14120F">
+<title>Log Palestra</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Log Palestra">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#14120F;
+  --surface:#1E1B17;
+  --surface-2:#26221D;
+  --text:#EDE8DF;
+  --text-muted:#948C7E;
+  --accent:#C1502E;
+  --accent-soft:rgba(193,80,46,.16);
+  --accent-strong:#DB6540;
+  --steel:#5B6B6B;
+  --olive:#8AA05E;
+  --border:#332E28;
+  --radius:16px;
+  --radius-sm:10px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',system-ui,sans-serif;
+  min-height:100vh;
+  overscroll-behavior-y:contain;
+}
+h1,h2,h3,.display{
+  font-family:'Oswald',system-ui,sans-serif;
+  text-transform:uppercase;
+  letter-spacing:.03em;
+  font-weight:600;
+  margin:0;
+}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;}
+button{font-family:inherit;}
+input,select,textarea{font-family:inherit;}
+
+#app{
+  max-width:560px;
+  margin:0 auto;
+  min-height:100vh;
+  padding-bottom:calc(96px + var(--safe-bottom));
+  position:relative;
+}
+
+/* ---------- Top bar ---------- */
+.topbar{
+  padding:calc(22px + var(--safe-top)) 20px 14px;
+  position:sticky;
+  top:0;
+  z-index:10;
+  background:linear-gradient(var(--bg) 70%, transparent);
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+}
+.topbar .eyebrow{
+  color:var(--text-muted);
+  font-size:12px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  margin-bottom:2px;
+  display:block;
+  font-weight:500;
+}
+.topbar h1{font-size:26px;}
+.topbar .back-btn{
+  background:none;border:none;color:var(--text);
+  font-size:15px;display:flex;align-items:center;gap:6px;
+  padding:6px 4px 6px 0;cursor:pointer;font-family:'Inter';
+  font-weight:500;
+}
+.topbar .back-btn svg{width:18px;height:18px;}
+
+/* ---------- Views ---------- */
+.view{display:none;padding:0 20px;}
+.view.active{display:block;}
+
+/* ---------- Home: day list ---------- */
+.day-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:16px 18px;
+  margin-bottom:12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+  transition:border-color .15s ease, transform .1s ease;
+}
+.day-card:active{transform:scale(.985);}
+.day-card:hover{border-color:#4a433a;}
+.day-card .info{min-width:0;}
+.day-card .label-row{
+  display:flex;align-items:center;gap:8px;margin-bottom:5px;
+}
+.day-tag{
+  font-size:11px;
+  font-family:'Oswald';
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  color:var(--accent-strong);
+  background:var(--accent-soft);
+  padding:3px 8px;
+  border-radius:100px;
+  font-weight:600;
+  white-space:nowrap;
+}
+.day-card .date{
+  font-size:13px;color:var(--text-muted);
+}
+.day-card .meta{
+  font-size:13px;
+  color:var(--text-muted);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.day-card .chev{color:var(--text-muted);flex:none;}
+.day-card .exercises-count{
+  font-family:'JetBrains Mono';
+  font-size:22px;
+  font-weight:700;
+  color:var(--text);
+  flex:none;
+  text-align:right;
+}
+.day-card .exercises-count .unit{
+  display:block;
+  font-family:'Inter';
+  font-weight:500;
+  font-size:10px;
+  color:var(--text-muted);
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  margin-top:-2px;
+}
+
+.empty-state{
+  text-align:center;
+  padding:64px 20px;
+  color:var(--text-muted);
+}
+.empty-state svg{width:52px;height:52px;color:var(--border);margin-bottom:14px;}
+.empty-state p{font-size:14px;line-height:1.5;margin:0;}
+.empty-state strong{color:var(--text);display:block;font-size:17px;margin-bottom:8px;font-family:'Oswald';text-transform:uppercase;letter-spacing:.02em;}
+
+/* ---------- FAB ---------- */
+.fab{
+  position:fixed;
+  right:20px;
+  bottom:calc(24px + var(--safe-bottom));
+  left:20px;
+  max-width:520px;
+  margin:0 auto;
+  background:var(--accent);
+  color:#fff;
+  border:none;
+  border-radius:100px;
+  padding:16px 20px;
+  font-family:'Oswald';
+  font-size:15px;
+  font-weight:600;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  box-shadow:0 8px 24px rgba(193,80,46,.35);
+  cursor:pointer;
+  z-index:20;
+}
+.fab:active{transform:scale(.98);}
+.fab.hidden{display:none;}
+.fab svg{width:18px;height:18px;}
+
+/* ---------- Day editor ---------- */
+.day-meta-bar{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:18px;
+}
+.day-meta-bar .day-title-group input{
+  background:none;border:none;color:var(--text);
+  font-family:'Oswald';font-size:24px;text-transform:uppercase;
+  letter-spacing:.03em;font-weight:600;padding:0;width:100%;
+}
+.day-meta-bar .day-title-group input:focus{outline:none;}
+.date-input{
+  background:var(--surface);
+  border:1px solid var(--border);
+  color:var(--text-muted);
+  font-size:13px;
+  border-radius:8px;
+  padding:6px 10px;
+  font-family:'Inter';
+}
+
+.exercise-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  margin-bottom:14px;
+  overflow:hidden;
+}
+.exercise-head{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:14px 16px 10px;
+}
+.exercise-head h3{font-size:17px;letter-spacing:.02em;}
+.exercise-head .remove-ex{
+  background:none;border:none;color:var(--text-muted);
+  padding:4px;cursor:pointer;line-height:0;
+}
+.exercise-head .remove-ex svg{width:18px;height:18px;}
+
+.tally{
+  display:flex;gap:5px;padding:0 16px 12px;flex-wrap:wrap;
+}
+.tally .mark{
+  width:20px;height:8px;border-radius:3px;
+  background:var(--border);
+}
+.tally .mark.filled{background:var(--accent);}
+
+.sets-table{width:100%;border-collapse:collapse;}
+.sets-table th{
+  font-size:10px;color:var(--text-muted);text-transform:uppercase;
+  letter-spacing:.08em;font-weight:600;text-align:left;
+  padding:0 16px 6px;
+}
+.sets-table th.num-col{width:34px;}
+.sets-table th.action-col{width:36px;}
+.sets-table td{padding:4px 4px 4px 16px;}
+.sets-table td:last-child{padding-right:16px;}
+.set-num{
+  font-family:'JetBrains Mono';font-weight:700;color:var(--text-muted);
+  font-size:14px;
+}
+.sets-table input{
+  width:100%;
+  background:var(--surface-2);
+  border:1px solid var(--border);
+  color:var(--text);
+  border-radius:var(--radius-sm);
+  padding:9px 10px;
+  font-family:'JetBrains Mono';
+  font-size:15px;
+  font-weight:500;
+}
+.sets-table input:focus{outline:none;border-color:var(--accent);}
+.remove-set{
+  background:none;border:none;color:var(--text-muted);
+  padding:6px;cursor:pointer;line-height:0;
+}
+.remove-set svg{width:16px;height:16px;}
+
+.add-set-btn{
+  display:flex;align-items:center;gap:6px;
+  background:none;border:none;color:var(--accent-strong);
+  font-family:'Oswald';font-size:12.5px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.05em;
+  padding:12px 16px 14px;cursor:pointer;
+}
+.add-set-btn svg{width:15px;height:15px;}
+
+.note-wrap{padding:0 16px 16px;}
+.note-wrap textarea{
+  width:100%;
+  background:var(--surface-2);
+  border:1px solid var(--border);
+  color:var(--text);
+  border-radius:var(--radius-sm);
+  padding:10px 12px;
+  font-size:13.5px;
+  font-family:'Inter';
+  resize:vertical;
+  min-height:40px;
+}
+.note-wrap textarea::placeholder{color:var(--text-muted);}
+.note-wrap textarea:focus{outline:none;border-color:var(--accent);}
+
+.add-exercise-row{
+  display:flex;gap:10px;margin-bottom:18px;
+}
+.add-exercise-row select{
+  flex:1;
+  background:var(--surface);
+  border:1px solid var(--border);
+  color:var(--text);
+  border-radius:var(--radius-sm);
+  padding:13px 12px;
+  font-size:14px;
+  appearance:none;
+  -webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23948C7E' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 12px center;
+  padding-right:32px;
+}
+.add-exercise-row button{
+  background:var(--surface);
+  border:1px solid var(--border);
+  color:var(--text);
+  border-radius:var(--radius-sm);
+  padding:0 16px;
+  font-family:'Oswald';
+  font-weight:600;
+  text-transform:uppercase;
+  font-size:13px;
+  letter-spacing:.03em;
+  cursor:pointer;
+}
+.add-exercise-row button:active{background:var(--surface-2);}
+
+.day-notes-wrap{margin:22px 0 14px;}
+.day-notes-wrap label{
+  display:block;font-size:11px;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;
+  font-weight:600;
+}
+.day-notes-wrap textarea{
+  width:100%;
+  background:var(--surface);
+  border:1px solid var(--border);
+  color:var(--text);
+  border-radius:var(--radius);
+  padding:14px;
+  font-size:14px;
+  font-family:'Inter';
+  min-height:70px;
+  resize:vertical;
+}
+.day-notes-wrap textarea:focus{outline:none;border-color:var(--accent);}
+
+.editor-actions{display:flex;gap:10px;margin:6px 0 30px;}
+.btn-export,.btn-delete{
+  flex:1;
+  padding:15px;
+  border-radius:100px;
+  font-family:'Oswald';
+  font-weight:600;
+  text-transform:uppercase;
+  font-size:13.5px;
+  letter-spacing:.04em;
+  border:none;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-export{background:var(--accent);color:#fff;}
+.btn-export svg{width:16px;height:16px;}
+.btn-delete{background:none;border:1px solid var(--border);color:var(--text-muted);flex:none;width:52px;}
+.btn-delete svg{width:17px;height:17px;}
+
+/* ---------- Modal ---------- */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.55);
+  display:flex;align-items:flex-end;z-index:30;
+  opacity:0;pointer-events:none;transition:opacity .18s ease;
+}
+.modal-overlay.open{opacity:1;pointer-events:auto;}
+.modal-sheet{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-bottom:none;
+  border-radius:22px 22px 0 0;
+  width:100%;
+  max-width:560px;
+  margin:0 auto;
+  padding:22px 20px calc(26px + var(--safe-bottom));
+  transform:translateY(100%);
+  transition:transform .22s cubic-bezier(.32,.72,0,1);
+}
+.modal-overlay.open .modal-sheet{transform:translateY(0);}
+.modal-sheet h2{font-size:19px;margin-bottom:16px;}
+.template-option{
+  display:flex;justify-content:space-between;align-items:center;
+  background:var(--surface-2);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:14px 16px;
+  margin-bottom:10px;
+  cursor:pointer;
+}
+.template-option:active{background:var(--accent-soft);}
+.template-option .t-name{font-family:'Oswald';font-weight:600;font-size:15px;text-transform:uppercase;letter-spacing:.02em;}
+.template-option .t-desc{font-size:12px;color:var(--text-muted);margin-top:2px;}
+.template-option svg{width:18px;height:18px;color:var(--text-muted);flex:none;}
+
+/* ---------- Toast ---------- */
+#toast{
+  position:fixed;left:50%;bottom:calc(100px + var(--safe-bottom));
+  transform:translate(-50%,10px);
+  background:var(--surface-2);
+  border:1px solid var(--border);
+  color:var(--text);
+  padding:11px 18px;
+  border-radius:100px;
+  font-size:13px;
+  z-index:40;
+  opacity:0;
+  transition:opacity .2s ease, transform .2s ease;
+  pointer-events:none;
+  white-space:nowrap;
+}
+#toast.show{opacity:1;transform:translate(-50%,0);}
+
+@media (prefers-reduced-motion: reduce){
+  *{transition:none !important;}
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ===== HOME ===== -->
+  <div id="view-home" class="view active">
+    <div class="topbar">
+      <div>
+        <span class="eyebrow" id="home-date-eyebrow"></span>
+        <h1>Log Palestra</h1>
+      </div>
+    </div>
+    <div id="home-content" style="padding:4px 0 10px;"></div>
+  </div>
+
+  <!-- ===== DAY EDITOR ===== -->
+  <div id="view-day" class="view">
+    <div class="topbar">
+      <button class="back-btn" id="btn-back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Indietro
+      </button>
+    </div>
+    <div style="padding:0 20px;">
+      <div class="day-meta-bar">
+        <div class="day-title-group">
+          <input type="text" id="day-title-input" placeholder="Nome giornata" />
+        </div>
+      </div>
+      <input type="date" id="day-date-input" class="date-input" style="margin-bottom:18px;width:100%;" />
+
+      <div id="exercise-list"></div>
+
+      <div class="add-exercise-row">
+        <select id="exercise-select"></select>
+        <button id="btn-add-exercise">Aggiungi</button>
+      </div>
+
+      <div class="day-notes-wrap">
+        <label for="day-notes">Note generali sulla giornata</label>
+        <textarea id="day-notes" placeholder="Sensazioni, energie, cose da ricordare per la prossima volta..."></textarea>
+      </div>
+
+      <div class="editor-actions">
+        <button class="btn-export" id="btn-export-pdf">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+          Esporta PDF
+        </button>
+        <button class="btn-delete" id="btn-delete-day" title="Elimina giornata">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<button class="fab" id="fab-new">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  Nuova giornata
+</button>
+
+<!-- Modal: new day -->
+<div class="modal-overlay" id="modal-newday">
+  <div class="modal-sheet">
+    <h2>Che giornata è?</h2>
+    <div id="template-list"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
