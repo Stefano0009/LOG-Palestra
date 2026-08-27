@@ -334,6 +334,83 @@ input,select,textarea{font-family:inherit;}
 }
 .add-exercise-row button:active{background:var(--surface-2);}
 
+/* ---------- Circuito ---------- */
+.toolbar-row{display:flex;justify-content:flex-end;margin:-4px 0 14px;}
+.btn-circuit-toggle{
+  background:none;border:1px solid var(--border);color:var(--text-muted);
+  border-radius:100px;padding:8px 14px;font-family:'Oswald';font-size:12px;
+  text-transform:uppercase;letter-spacing:.04em;font-weight:600;
+  display:flex;align-items:center;gap:6px;cursor:pointer;
+}
+.btn-circuit-toggle svg{width:14px;height:14px;}
+.btn-circuit-toggle.active{background:var(--accent-soft);color:var(--accent-strong);border-color:var(--accent);}
+.btn-circuit-toggle.hidden{display:none;}
+
+.circuit-group{
+  border:1.5px dashed var(--accent);
+  border-radius:var(--radius);
+  padding:12px 12px 4px;
+  margin-bottom:14px;
+  background:rgba(193,80,46,.045);
+}
+.circuit-label{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:0 4px 10px;
+}
+.circuit-tag{
+  font-family:'Oswald';font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent-strong);background:var(--accent-soft);padding:3px 9px;
+  border-radius:100px;font-weight:600;
+}
+.circuit-ungroup{
+  background:none;border:none;color:var(--text-muted);font-size:12px;
+  cursor:pointer;display:flex;align-items:center;gap:4px;padding:4px;
+}
+.circuit-ungroup svg{width:14px;height:14px;}
+.circuit-group .exercise-card{margin-bottom:0;}
+.circuit-connector{
+  display:flex;align-items:center;justify-content:center;
+  gap:6px;margin:-2px 0 10px;color:var(--accent-strong);
+  font-family:'Oswald';font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+}
+.circuit-connector svg{width:14px;height:14px;}
+.circuit-connector::before,.circuit-connector::after{
+  content:"";flex:1;height:1px;background:var(--accent);opacity:.35;
+}
+
+.select-checkbox{
+  width:22px;height:22px;border-radius:7px;border:1.5px solid var(--border);
+  display:flex;align-items:center;justify-content:center;flex:none;margin-right:10px;
+  background:var(--surface-2);
+}
+.select-checkbox.checked{background:var(--accent);border-color:var(--accent);}
+.select-checkbox svg{width:13px;height:13px;color:#fff;}
+.exercise-card.selectable .exercise-head{cursor:pointer;}
+.exercise-card.selectable{border-color:var(--border);}
+.exercise-card.selected{border-color:var(--accent);background:var(--accent-soft);}
+.exercise-card.selectable .sets-table,
+.exercise-card.selectable .add-set-btn,
+.exercise-card.selectable .note-wrap,
+.exercise-card.selectable .tally{opacity:.45;pointer-events:none;}
+
+.selection-bar{
+  position:fixed;left:20px;right:20px;bottom:calc(24px + var(--safe-bottom));
+  max-width:520px;margin:0 auto;background:var(--surface-2);border:1px solid var(--accent);
+  border-radius:100px;padding:10px 10px 10px 20px;display:flex;justify-content:space-between;
+  align-items:center;z-index:25;box-shadow:0 8px 24px rgba(0,0,0,.4);gap:10px;
+}
+.selection-bar span{font-size:13px;color:var(--text-muted);flex:1;}
+.selection-bar .confirm-sel{
+  background:var(--accent);color:#fff;border:none;border-radius:100px;padding:11px 18px;
+  font-family:'Oswald';font-weight:600;font-size:12.5px;text-transform:uppercase;
+  letter-spacing:.03em;cursor:pointer;
+}
+.selection-bar .confirm-sel:disabled{opacity:.35;}
+.selection-bar .cancel-sel{
+  background:none;border:none;color:var(--text-muted);padding:11px 10px;
+  font-size:13px;cursor:pointer;
+}
+
 .day-notes-wrap{margin:22px 0 14px;}
 .day-notes-wrap label{
   display:block;font-size:11px;color:var(--text-muted);
@@ -462,6 +539,13 @@ input,select,textarea{font-family:inherit;}
       </div>
       <input type="date" id="day-date-input" class="date-input" style="margin-bottom:18px;width:100%;" />
 
+      <div class="toolbar-row">
+        <button class="btn-circuit-toggle hidden" id="btn-toggle-circuit-mode">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          Crea circuito
+        </button>
+      </div>
+
       <div id="exercise-list"></div>
 
       <div class="add-exercise-row">
@@ -502,6 +586,12 @@ input,select,textarea{font-family:inherit;}
 </div>
 
 <div id="toast"></div>
+
+<div class="selection-bar" id="selection-bar" style="display:none;">
+  <span id="selection-bar-text">Seleziona 2 esercizi</span>
+  <button class="cancel-sel" id="btn-cancel-selection">Annulla</button>
+  <button class="confirm-sel" id="btn-confirm-circuit" disabled>Unisci</button>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="app.js"></script>
