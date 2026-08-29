@@ -35,7 +35,7 @@
 }
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;min-width:0;}
-html,body{margin:0;padding:0;overflow-x:hidden;width:100%;}
+html,body{margin:0;padding:0;width:100%;}
 body{
   background:var(--bg);
   color:var(--text);
@@ -232,6 +232,21 @@ input,select,textarea{font-family:inherit;}
   padding:14px 16px 10px;
 }
 .exercise-head h3{font-size:17px;letter-spacing:.02em;overflow-wrap:break-word;word-break:break-word;}
+.ex-icon{
+  width:32px;height:32px;border-radius:9px;background:var(--surface-2);
+  display:flex;align-items:center;justify-content:center;color:var(--accent-strong);
+  flex:none;
+}
+.ex-icon svg{width:17px;height:17px;}
+.drag-handle{
+  background:none;border:none;color:var(--text-muted);padding:4px 2px;
+  display:flex;align-items:center;flex:none;cursor:grab;touch-action:none;
+}
+.drag-handle svg{width:18px;height:18px;}
+.exercise-card.dragging-active,.circuit-group.dragging-active{
+  border-color:var(--accent);box-shadow:0 10px 26px rgba(0,0,0,.4);opacity:.92;
+}
+body.dnd-active{user-select:none;-webkit-user-select:none;}
 .exercise-head .remove-ex{
   background:none;border:none;color:var(--text-muted);
   padding:4px;cursor:pointer;line-height:0;
@@ -452,6 +467,12 @@ input,select,textarea{font-family:inherit;}
 .btn-export svg{width:16px;height:16px;}
 .btn-delete{background:none;border:1px solid var(--border);color:var(--text-muted);flex:none;width:52px;}
 .btn-delete svg{width:17px;height:17px;}
+.btn-share{
+  background:none;border:1px solid var(--border);color:var(--text);flex:none;width:52px;
+  border-radius:100px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.btn-share svg{width:18px;height:18px;}
+.btn-share:active{background:var(--surface-2);}
 
 /* ---------- Modal ---------- */
 .modal-overlay{
@@ -564,7 +585,10 @@ input,select,textarea{font-family:inherit;}
       <div class="editor-actions">
         <button class="btn-export" id="btn-export-pdf">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-          Esporta PDF
+          Scarica PDF
+        </button>
+        <button class="btn-share" id="btn-share-pdf" title="Condividi (WhatsApp, email...)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.6" x2="15.4" y2="6.4"/><line x1="8.6" y1="13.4" x2="15.4" y2="17.6"/></svg>
         </button>
         <button class="btn-delete" id="btn-delete-day" title="Elimina giornata">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
