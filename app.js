@@ -28,29 +28,12 @@
     return GROUP_ICONS[EXERCISE_TO_GROUP[exName]] || GROUP_ICONS["Addome"];
   }
 
-  const DAY_TEMPLATES = [
-    {
-      key: "giorno1",
-      name: "Giorno 1",
-      desc: "Gambe, trazioni, petto",
-      exercises: ["Stacco", "Pressa", "Trazioni", "Piegamenti declinati", "Panca", "Affondi", "Alzate laterali", "Addome"]
-    },
-    {
-      key: "giorno2",
-      name: "Giorno 2",
-      desc: "Petto, dorso, braccia",
-      exercises: ["Panca", "Trazioni", "Piegamenti a terra", "Pulley", "Lat machine tricipiti", "Push down", "Hammer curl"]
-    },
-    {
-      key: "giorno3",
-      name: "Giorno 3",
-      desc: "Gambe, dorso, spalle",
-      exercises: ["Squat con bilanciere", "Trazioni", "Military press", "Lat machine (presa stretta)", "Rowing machine", "Leg extension", "Croci manubri", "Curl ez", "Addome"]
-    },
+  const BUILTIN_TEMPLATES = [
     { key: "libero", name: "Allenamento libero", desc: "Parti da zero e scegli tu", exercises: [] }
   ];
 
   const STORAGE_KEY = "logpalestra_days_v1";
+  const TEMPLATES_KEY = "logpalestra_templates_v1";
   const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
   const ICON_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
   const ICON_CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
@@ -59,9 +42,11 @@
   const ICON_ZAP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
   const ICON_GRIP = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
   const ICON_SHARE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.6" x2="15.4" y2="6.4"/><line x1="8.6" y1="13.4" x2="15.4" y2="17.6"/></svg>';
+  const ICON_BOOKMARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21 12 16l-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
 
   /* ================= Stato / persistenza ================= */
   let days = loadDays();
+  let customTemplates = loadTemplates();
   let currentDayId = null;
   let circuitSelectMode = false;
   let selectedForCircuit = [];
@@ -75,6 +60,15 @@
   }
   function saveDays() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(days));
+  }
+  function loadTemplates() {
+    try {
+      const raw = localStorage.getItem(TEMPLATES_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+  }
+  function saveTemplates() {
+    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(customTemplates));
   }
   function uid() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -182,19 +176,54 @@
   }
 
   /* ================= Nuova giornata: modal ================= */
+  function getAllTemplateOptions() {
+    return [
+      ...BUILTIN_TEMPLATES,
+      ...customTemplates.map(t => ({
+        key: t.id,
+        id: t.id,
+        name: t.name,
+        desc: `${t.exercises.length} ${t.exercises.length === 1 ? "esercizio" : "esercizi"}`,
+        exercises: t.exercises,
+        isCustom: true
+      }))
+    ];
+  }
+
   function openNewDayModal() {
-    templateList.innerHTML = DAY_TEMPLATES.map(t => `
+    const options = getAllTemplateOptions();
+    const hint = customTemplates.length === 0
+      ? `<p class="modal-hint">Crea un allenamento libero, aggiungi gli esercizi e salvalo come modello per ritrovarlo qui con il nome che vuoi.</p>`
+      : "";
+
+    templateList.innerHTML = options.map(t => `
       <div class="template-option" data-key="${t.key}">
         <div>
-          <div class="t-name">${t.name}</div>
-          <div class="t-desc">${t.desc}</div>
+          <div class="t-name">${escapeHtml(t.name)}</div>
+          <div class="t-desc">${escapeHtml(t.desc)}</div>
         </div>
-        ${ICON_CHEV}
+        ${t.isCustom ? `<button class="template-delete" data-id="${t.id}" title="Elimina modello">${ICON_TRASH}</button>` : ICON_CHEV}
       </div>
-    `).join("");
+    `).join("") + hint;
+
+    templateList.querySelectorAll(".template-delete").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const tpl = customTemplates.find(t => t.id === id);
+        if (!tpl) return;
+        if (!confirm(`Eliminare il modello "${tpl.name}"?`)) return;
+        customTemplates = customTemplates.filter(t => t.id !== id);
+        saveTemplates();
+        openNewDayModal();
+      });
+    });
+
     templateList.querySelectorAll(".template-option").forEach(el => {
-      el.addEventListener("click", () => {
-        const tpl = DAY_TEMPLATES.find(t => t.key === el.dataset.key);
+      el.addEventListener("click", (e) => {
+        if (e.target.closest(".template-delete")) return;
+        const tpl = options.find(t => t.key === el.dataset.key);
+        if (!tpl) return;
         createDayFromTemplate(tpl);
         closeModal();
       });
@@ -224,6 +253,32 @@
   }
 
   fabNew.addEventListener("click", openNewDayModal);
+
+  /* ================= Salva giornata come modello ================= */
+  document.getElementById("btn-save-template").addEventListener("click", () => {
+    const day = getCurrentDay();
+    if (!day) return;
+    if (day.exercises.length === 0) {
+      showToast("Aggiungi almeno un esercizio prima di salvare il modello");
+      return;
+    }
+    const suggested = day.title && day.title !== "Allenamento libero" ? day.title : "";
+    const name = prompt("Nome del modello:", suggested);
+    if (name === null) return;
+    const trimmed = name.trim();
+    if (!trimmed) { showToast("Nome non valido"); return; }
+
+    const exerciseNames = day.exercises.map(e => e.name);
+    const existing = customTemplates.find(t => t.name.toLowerCase() === trimmed.toLowerCase());
+    if (existing) {
+      if (!confirm(`Esiste già un modello chiamato "${trimmed}". Sovrascriverlo?`)) return;
+      existing.exercises = exerciseNames;
+    } else {
+      customTemplates.push({ id: uid(), name: trimmed, exercises: exerciseNames });
+    }
+    saveTemplates();
+    showToast("Modello salvato");
+  });
 
   /* ================= Render: editor giornata ================= */
   function populateExerciseSelect() {
