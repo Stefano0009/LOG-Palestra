@@ -5,11 +5,28 @@
   const EXERCISE_GROUPS = {
     "Gambe": ["Stacco", "Squat con bilanciere", "Squat su box", "Affondi", "Affondi con manubri", "Step up con manubri", "Leg extension", "Pressa", "Pressa orizzontale"],
     "Dorso": ["Trazioni", "Pulley", "Lat machine (presa stretta)", "Lat machine con triangolo", "Lat machine avanti", "Rowing machine"],
-    "Petto": ["Panca", "Piegamenti declinati", "Piegamenti a terra", "Piegamenti facilitati", "Croci manubri", "Distensioni con manubri su panca inclinata"],
-    "Spalle": ["Military press", "Alzate laterali", "Distensioni da seduti con manubri"],
+    "Petto": ["Panca", "Piegamenti declinati", "Piegamenti a terra", "Piegamenti facilitati", "Croci manubri"],
+    "Spalle": ["Military press", "Alzate laterali"],
     "Braccia": ["Lat machine tricipiti", "Push down", "Hammer curl", "Curl ez"],
-    "Addome": ["Addome"]
+    "Addome": ["Crunch", "Reverse Crunch", "Russian Twist"]
   };
+
+  const EXERCISE_TO_GROUP = { "Addome": "Addome" };
+  Object.entries(EXERCISE_GROUPS).forEach(([group, list]) => {
+    list.forEach(name => { EXERCISE_TO_GROUP[name] = group; });
+  });
+
+  const GROUP_ICONS = {
+    "Gambe": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h2l1 7-1 9H8l-1-8"/><path d="M15 4h2l1 8-1 8h-3l-1-9"/></svg>',
+    "Dorso": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5v3M20 5v3"/><path d="M4 8h16"/><path d="M9 8v11M15 8v11"/><path d="M9 19h6"/></svg>',
+    "Petto": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="10" width="3" height="5" rx="1"/><rect x="19" y="10" width="3" height="5" rx="1"/><rect x="5" y="8" width="3" height="9" rx="1"/><rect x="16" y="8" width="3" height="9" rx="1"/><line x1="8" y1="12.5" x2="16" y2="12.5"/></svg>',
+    "Spalle": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v6"/><circle cx="6" cy="14" r="2.6"/><circle cx="18" cy="14" r="2.6"/><path d="M6 11.4V8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3.4"/></svg>',
+    "Braccia": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18c-2-1-3-3-2-6 1-2 1-4 3-5"/><path d="M7 7c2-1 4-1 5 1 1 1.5 1 3 3 4"/><circle cx="17" cy="14" r="3"/></svg>',
+    "Addome": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="15" x2="17" y2="15"/><line x1="12" y1="3" x2="12" y2="21"/></svg>'
+  };
+  function groupIconFor(exName) {
+    return GROUP_ICONS[EXERCISE_TO_GROUP[exName]] || GROUP_ICONS["Addome"];
+  }
 
   const DAY_TEMPLATES = [
     {
@@ -40,12 +57,15 @@
   const ICON_PLUS_SM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
   const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
   const ICON_ZAP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
+  const ICON_GRIP = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
+  const ICON_SHARE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.6" x2="15.4" y2="6.4"/><line x1="8.6" y1="13.4" x2="15.4" y2="17.6"/></svg>';
 
   /* ================= Stato / persistenza ================= */
   let days = loadDays();
   let currentDayId = null;
   let circuitSelectMode = false;
   let selectedForCircuit = [];
+  let dnd = null;
 
   function loadDays() {
     try {
@@ -254,6 +274,23 @@
     confirmBtn.disabled = selectedForCircuit.length !== 2;
   }
 
+  function computeBlocks(day) {
+    const blocks = [];
+    const seen = new Set();
+    day.exercises.forEach(ex => {
+      if (seen.has(ex.id)) return;
+      if (ex.circuitId) {
+        const members = day.exercises.filter(e => e.circuitId === ex.circuitId);
+        members.forEach(m => seen.add(m.id));
+        blocks.push({ type: "circuit", ids: members.map(m => m.id), circuitId: ex.circuitId });
+      } else {
+        seen.add(ex.id);
+        blocks.push({ type: "single", ids: [ex.id] });
+      }
+    });
+    return blocks;
+  }
+
   function renderExercises(day) {
     const toggleBtn = document.getElementById("btn-toggle-circuit-mode");
     const standaloneCount = day.exercises.filter(e => !e.circuitId).length;
@@ -269,42 +306,47 @@
       return;
     }
 
-    const rendered = new Set();
-    let html = "";
-    day.exercises.forEach(ex => {
-      if (rendered.has(ex.id)) return;
-      if (ex.circuitId) {
-        const members = day.exercises.filter(e => e.circuitId === ex.circuitId);
-        members.forEach(m => rendered.add(m.id));
-        html += renderCircuitGroup(members);
-      } else {
-        rendered.add(ex.id);
-        html += renderExerciseCard(ex);
+    const blocks = computeBlocks(day);
+    const html = blocks.map(b => {
+      if (b.type === "circuit") {
+        const members = b.ids.map(id => day.exercises.find(e => e.id === id));
+        return renderCircuitGroup(members);
       }
-    });
+      const ex = day.exercises.find(e => e.id === b.ids[0]);
+      return renderExerciseCard(ex);
+    }).join("");
 
     exerciseList.innerHTML = html;
     bindExerciseCardEvents(day);
     updateSelectionBar();
   }
 
+  function dragHandleHtml(anchorId) {
+    if (circuitSelectMode) return "";
+    return `<button type="button" class="drag-handle" data-anchor-id="${anchorId}" title="Trascina per riordinare">${ICON_GRIP}</button>`;
+  }
+
   function renderCircuitGroup(members) {
     const inner = members.map((m, i) =>
-      renderExerciseCard(m) + (i < members.length - 1
+      renderExerciseCard(m, { showHandle: false }) + (i < members.length - 1
         ? `<div class="circuit-connector">${ICON_ZAP} poi</div>`
         : "")
     ).join("");
     return `
-      <div class="circuit-group">
+      <div class="circuit-group" data-circuit-id="${members[0].circuitId}">
         <div class="circuit-label">
-          <span class="circuit-tag">Circuito</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${dragHandleHtml(members[0].id)}
+            <span class="circuit-tag">Circuito</span>
+          </div>
           <button class="circuit-ungroup" data-circuit-id="${members[0].circuitId}">${ICON_X} Dividi</button>
         </div>
         ${inner}
       </div>`;
   }
 
-  function renderExerciseCard(ex) {
+  function renderExerciseCard(ex, opts = {}) {
+    const showHandle = opts.showHandle !== false;
     const isSelected = selectedForCircuit.includes(ex.id);
     const canSelect = circuitSelectMode && !ex.circuitId;
     const cardClasses = ["exercise-card"];
@@ -328,10 +370,14 @@
     `).join("");
 
     const checkboxHtml = `<div class="select-checkbox ${isSelected ? "checked" : ""}">${isSelected ? ICON_CHECK : ""}</div>`;
+    const handleHtml = showHandle ? dragHandleHtml(ex.id) : "";
+    const iconHtml = `<div class="ex-icon">${groupIconFor(ex.name)}</div>`;
 
     return `
       <div class="${cardClasses.join(" ")}" data-ex-id="${ex.id}">
         <div class="exercise-head">
+          ${handleHtml}
+          ${iconHtml}
           ${canSelect ? checkboxHtml : ""}
           <h3 style="flex:1;">${escapeHtml(ex.name)}</h3>
           ${!circuitSelectMode ? `<button class="remove-ex" title="Rimuovi esercizio">${ICON_TRASH}</button>` : ""}
@@ -364,6 +410,10 @@
         saveDays();
         renderExercises(day);
       });
+    });
+
+    exerciseList.querySelectorAll(".drag-handle").forEach(handle => {
+      bindDragHandle(handle, day);
     });
 
     exerciseList.querySelectorAll(".exercise-card").forEach(card => {
@@ -429,6 +479,79 @@
     marks.forEach((m, i) => m.classList.toggle("filled", i < doneCount));
   }
 
+  /* ================= Drag & drop riordino ================= */
+  function bindDragHandle(handleEl, day) {
+    handleEl.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      const anchorId = handleEl.dataset.anchorId;
+      const blocks = computeBlocks(day);
+      const dragPos = blocks.findIndex(b => b.ids.includes(anchorId));
+      if (dragPos < 0) return;
+      dnd = { day, blocks, dragPos };
+      document.body.classList.add("dnd-active");
+      try { handleEl.setPointerCapture(e.pointerId); } catch (err) {}
+      highlightDragEl();
+      document.addEventListener("pointermove", onDndMove);
+      document.addEventListener("pointerup", onDndEnd);
+      document.addEventListener("pointercancel", onDndEnd);
+    });
+  }
+
+  function highlightDragEl() {
+    if (!dnd) return;
+    Array.from(exerciseList.children).forEach((el, i) => {
+      el.classList.toggle("dragging-active", i === dnd.dragPos);
+    });
+  }
+
+  function reorderBlocks(day, blocks, dragPos, insertPos) {
+    const blockAtDrag = blocks[dragPos];
+    const draggedIds = new Set(blockAtDrag.ids);
+    const draggedObjs = day.exercises.filter(e => draggedIds.has(e.id));
+    const rest = day.exercises.filter(e => !draggedIds.has(e.id));
+    const remainingBlocks = blocks.filter((_, i) => i !== dragPos);
+    const clamped = Math.max(0, Math.min(insertPos, remainingBlocks.length));
+    if (clamped >= remainingBlocks.length) {
+      day.exercises = [...rest, ...draggedObjs];
+    } else {
+      const anchorId = remainingBlocks[clamped].ids[0];
+      const anchorIdx = rest.findIndex(e => e.id === anchorId);
+      day.exercises = [...rest.slice(0, anchorIdx), ...draggedObjs, ...rest.slice(anchorIdx)];
+    }
+  }
+
+  function onDndMove(e) {
+    if (!dnd) return;
+    e.preventDefault();
+    const children = Array.from(exerciseList.children);
+    const others = children.filter((_, i) => i !== dnd.dragPos);
+    const pointerY = e.clientY;
+    let insertPos = others.length;
+    for (let k = 0; k < others.length; k++) {
+      const r = others[k].getBoundingClientRect();
+      const mid = r.top + r.height / 2;
+      if (pointerY < mid) { insertPos = k; break; }
+    }
+    if (insertPos !== dnd.dragPos) {
+      reorderBlocks(dnd.day, dnd.blocks, dnd.dragPos, insertPos);
+      dnd.dragPos = insertPos;
+      dnd.blocks = computeBlocks(dnd.day);
+      renderExercises(dnd.day);
+      highlightDragEl();
+    }
+  }
+
+  function onDndEnd() {
+    if (!dnd) return;
+    document.removeEventListener("pointermove", onDndMove);
+    document.removeEventListener("pointerup", onDndEnd);
+    document.removeEventListener("pointercancel", onDndEnd);
+    document.body.classList.remove("dnd-active");
+    saveDays();
+    renderExercises(dnd.day);
+    dnd = null;
+  }
+
   /* ================= Eventi editor: titolo, data, note, aggiunta esercizio ================= */
   dayTitleInput.addEventListener("input", () => {
     const day = getCurrentDay(); if (!day) return;
@@ -492,7 +615,8 @@
     const day = getCurrentDay();
     if (!day) return;
     try {
-      exportDayToPdf(day);
+      const { doc, filename } = buildPdfDoc(day);
+      doc.save(filename);
       showToast("PDF scaricato");
     } catch (err) {
       console.error(err);
@@ -500,110 +624,210 @@
     }
   });
 
-  function exportDayToPdf(day) {
+  document.getElementById("btn-share-pdf").addEventListener("click", async () => {
+    const day = getCurrentDay();
+    if (!day) return;
+    try {
+      const { doc, filename } = buildPdfDoc(day);
+      const blob = doc.output("blob");
+      const file = new File([blob], filename, { type: "application/pdf" });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: day.title || "Allenamento",
+          text: `Allenamento ${formatDateHuman(day.date)}`
+        }).catch(() => {});
+      } else {
+        doc.save(filename);
+        showToast("Condivisione diretta non supportata: PDF scaricato, condividilo manualmente");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Errore nella condivisione");
+    }
+  });
+
+  function buildPdfDoc(day) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
     const marginX = 48;
-    let y = 56;
+    const bottomLimit = pageH - 60;
+    let y = 0;
 
-    const INK = "#14120F";
-    const ACCENT = "#C1502E";
-    const GREY = "#6b6459";
+    const INK = [20, 18, 15];
+    const CREAM = [237, 232, 223];
+    const ACCENT = [193, 80, 46];
+    const ACCENT_TINT = [244, 224, 214];
+    const GREY = [107, 100, 89];
+    const ROW_ALT = [246, 242, 235];
+    const HEADER_H = 92;
 
-    doc.setTextColor(INK);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.text((day.title || "Giornata").toUpperCase(), marginX, y);
+    function drawHeaderBand() {
+      doc.setFillColor(...INK);
+      doc.rect(0, 0, pageW, HEADER_H, "F");
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.setTextColor(GREY);
-    y += 20;
-    doc.text(formatDateHuman(day.date), marginX, y);
+      // piccolo bilanciere decorativo in alto a destra
+      const bx = pageW - marginX - 58, by = 34;
+      doc.setFillColor(...CREAM);
+      doc.roundedRect(bx, by, 58, 5, 2.5, 2.5, "F");
+      doc.setFillColor(...ACCENT);
+      doc.roundedRect(bx - 6, by - 8, 9, 21, 2, 2, "F");
+      doc.roundedRect(bx + 55, by - 8, 9, 21, 2, 2, "F");
+      doc.setFillColor(...CREAM);
+      doc.roundedRect(bx - 12, by - 5, 6, 15, 1.5, 1.5, "F");
+      doc.roundedRect(bx + 64, by - 5, 6, 15, 1.5, 1.5, "F");
 
-    y += 8;
-    doc.setDrawColor(224, 218, 206);
-    doc.line(marginX, y, pageW - marginX, y);
-    y += 26;
-
-    const colX = { num: marginX, reps: marginX + 40, weight: marginX + 150, note: marginX + 260 };
-
-    day.exercises.forEach((ex, exIdx) => {
-      if (y > 740) { doc.addPage(); y = 56; }
-
+      doc.setTextColor(...CREAM);
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(13);
-      doc.setTextColor(INK);
-      doc.text(`${exIdx + 1}. ${ex.name}`, marginX, y);
-      y += 18;
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
-      doc.setTextColor(ACCENT);
-      doc.text("SERIE", colX.num, y);
-      doc.text("REPS", colX.reps, y);
-      doc.text("KG", colX.weight, y);
-      y += 6;
-      doc.setDrawColor(235, 230, 220);
-      doc.line(marginX, y, pageW - marginX, y);
-      y += 14;
+      doc.setFontSize(21);
+      doc.text((day.title || "Giornata").toUpperCase(), marginX, 45);
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10.5);
-      doc.setTextColor(INK);
+      doc.setTextColor(214, 155, 133);
+      doc.text(formatDateHuman(day.date), marginX, 65);
+    }
 
-      const setsWithData = ex.sets.filter(s => s.reps !== "" || s.weight !== "");
-      const setsToPrint = setsWithData.length ? setsWithData : ex.sets;
-
-      setsToPrint.forEach((s, i) => {
-        if (y > 770) { doc.addPage(); y = 56; }
-        doc.text(String(i + 1), colX.num, y);
-        doc.text(s.reps !== "" ? String(s.reps) : "-", colX.reps, y);
-        doc.text(s.weight !== "" ? String(s.weight) + " kg" : "-", colX.weight, y);
-        y += 16;
-      });
-
-      if (ex.note && ex.note.trim()) {
-        y += 2;
-        doc.setFont("helvetica", "italic");
-        doc.setFontSize(9.5);
-        doc.setTextColor(GREY);
-        const noteLines = doc.splitTextToSize("Note: " + ex.note.trim(), pageW - marginX * 2);
-        noteLines.forEach(line => {
-          if (y > 770) { doc.addPage(); y = 56; }
-          doc.text(line, marginX, y);
-          y += 13;
-        });
+    function ensureSpace(needed) {
+      if (y + needed > bottomLimit) {
+        doc.addPage();
+        y = 40;
       }
+    }
 
-      y += 16;
+    drawHeaderBand();
+    y = HEADER_H + 32;
+
+    const colX = { badge: marginX, name: marginX + 26, num: marginX + 6, reps: marginX + 90, weight: marginX + 190 };
+    const tableRight = pageW - marginX;
+
+    const seen = new Set();
+    let exNumber = 0;
+
+    day.exercises.forEach((ex) => {
+      if (seen.has(ex.id)) return;
+
+      let group = [ex];
+      if (ex.circuitId) {
+        group = day.exercises.filter(e => e.circuitId === ex.circuitId);
+      }
+      group.forEach(g => seen.add(g.id));
+
+      group.forEach((member, memberIdx) => {
+        exNumber++;
+        ensureSpace(60);
+
+        // badge numerato
+        doc.setFillColor(...ACCENT);
+        doc.circle(colX.badge + 8, y - 5, 10, "F");
+        doc.setTextColor(...CREAM);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.text(String(exNumber), colX.badge + 8, y - 1.5, { align: "center" });
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        doc.setTextColor(...INK);
+        doc.text(member.name, colX.name, y);
+
+        if (group.length > 1) {
+          const tagW = doc.getTextWidth("CIRCUITO") + 14;
+          const tagX = tableRight - tagW;
+          doc.setFillColor(...ACCENT_TINT);
+          doc.roundedRect(tagX, y - 12, tagW, 16, 8, 8, "F");
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(8);
+          doc.setTextColor(...ACCENT);
+          doc.text("CIRCUITO", tagX + 7, y - 1.5);
+        }
+
+        y += 16;
+
+        // intestazione tabella
+        doc.setFillColor(...ROW_ALT);
+        doc.rect(marginX, y - 9, tableRight - marginX, 15, "F");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.setTextColor(...GREY);
+        doc.text("SERIE", colX.num, y + 1);
+        doc.text("REPS", colX.reps, y + 1);
+        doc.text("KG", colX.weight, y + 1);
+        y += 15;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10.5);
+
+        const setsWithData = member.sets.filter(s => s.reps !== "" || s.weight !== "");
+        const setsToPrint = setsWithData.length ? setsWithData : member.sets;
+
+        setsToPrint.forEach((s, i) => {
+          ensureSpace(20);
+          if (i % 2 === 1) {
+            doc.setFillColor(250, 248, 244);
+            doc.rect(marginX, y - 9, tableRight - marginX, 15, "F");
+          }
+          doc.setTextColor(...INK);
+          doc.text(String(i + 1), colX.num, y + 1);
+          doc.text(s.reps !== "" ? String(s.reps) : "\u2013", colX.reps, y + 1);
+          doc.text(s.weight !== "" ? String(s.weight) + " kg" : "\u2013", colX.weight, y + 1);
+          y += 15;
+        });
+
+        if (member.note && member.note.trim()) {
+          y += 4;
+          doc.setFont("helvetica", "italic");
+          doc.setFontSize(9);
+          doc.setTextColor(...GREY);
+          const noteLines = doc.splitTextToSize("Nota: " + member.note.trim(), tableRight - marginX);
+          noteLines.forEach(line => {
+            ensureSpace(13);
+            doc.text(line, marginX, y);
+            y += 12;
+          });
+        }
+
+        y += group.length > 1 && memberIdx < group.length - 1 ? 10 : 20;
+      });
     });
 
     if (day.notes && day.notes.trim()) {
-      if (y > 700) { doc.addPage(); y = 56; }
-      y += 6;
-      doc.setDrawColor(224, 218, 206);
-      doc.line(marginX, y, pageW - marginX, y);
-      y += 22;
+      ensureSpace(50);
+      y += 4;
+      doc.setDrawColor(...ACCENT);
+      doc.setLineWidth(1.4);
+      doc.line(marginX, y, marginX, y + 2);
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.setTextColor(INK);
-      doc.text("NOTE GENERALI", marginX, y);
-      y += 16;
+      doc.setFontSize(10.5);
+      doc.setTextColor(...INK);
+      doc.text("NOTE GENERALI", marginX, y + 12);
+      y += 26;
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10.5);
-      doc.setTextColor(GREY);
-      const lines = doc.splitTextToSize(day.notes.trim(), pageW - marginX * 2);
+      doc.setTextColor(...GREY);
+      const lines = doc.splitTextToSize(day.notes.trim(), tableRight - marginX);
       lines.forEach(line => {
-        if (y > 780) { doc.addPage(); y = 56; }
+        ensureSpace(16);
         doc.text(line, marginX, y);
         y += 15;
       });
     }
 
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= pageCount; p++) {
+      doc.setPage(p);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(...GREY);
+      doc.text("Log Palestra", marginX, pageH - 24);
+      doc.text(`${p} / ${pageCount}`, pageW - marginX, pageH - 24, { align: "right" });
+    }
+
     const filenameSafe = (day.title || "giornata").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-    doc.save(`${filenameSafe || "giornata"}_${day.date || todayISO()}.pdf`);
+    const filename = `${filenameSafe || "giornata"}_${day.date || todayISO()}.pdf`;
+    return { doc, filename };
   }
 
   /* ================= Service worker ================= */
