@@ -1,4 +1,4 @@
-const CACHE_NAME = "log-palestra-v1";
+const CACHE_NAME = "log-palestra-v2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -25,6 +25,26 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  const url = new URL(event.request.url);
+  const isCoreFile = event.request.mode === "navigate" || /\.(html|js)$/.test(url.pathname);
+
+  if (isCoreFile) {
+    // Sempre la versione più recente da rete quando possibile; cache solo come fallback offline.
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Icone, manifest, librerie: cache-first per velocità e uso offline.
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
