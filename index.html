@@ -450,6 +450,23 @@ body.dnd-active{user-select:none;-webkit-user-select:none;}
 .day-notes-wrap textarea:focus{outline:none;border-color:var(--accent);}
 
 .editor-actions{display:flex;gap:10px;margin:6px 0 30px;}
+.btn-save-template{
+  width:100%;
+  background:var(--surface);
+  border:1px solid var(--border);
+  color:var(--text);
+  border-radius:100px;
+  padding:14px;
+  font-family:'Oswald';
+  font-weight:600;
+  text-transform:uppercase;
+  font-size:13px;
+  letter-spacing:.03em;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  cursor:pointer;
+}
+.btn-save-template svg{width:16px;height:16px;color:var(--accent-strong);}
+.btn-save-template:active{background:var(--surface-2);}
 .btn-export,.btn-delete{
   flex:1;
   padding:15px;
@@ -508,6 +525,16 @@ body.dnd-active{user-select:none;-webkit-user-select:none;}
 .template-option .t-name{font-family:'Oswald';font-weight:600;font-size:15px;text-transform:uppercase;letter-spacing:.02em;}
 .template-option .t-desc{font-size:12px;color:var(--text-muted);margin-top:2px;}
 .template-option svg{width:18px;height:18px;color:var(--text-muted);flex:none;}
+.template-delete{
+  background:none;border:none;color:var(--text-muted);padding:6px;cursor:pointer;
+  flex:none;display:flex;align-items:center;
+}
+.template-delete svg{width:17px;height:17px;}
+.template-delete:active{color:var(--accent);}
+.modal-hint{
+  font-size:12.5px;color:var(--text-muted);line-height:1.5;
+  margin:6px 2px 2px;
+}
 
 /* ---------- Toast ---------- */
 #toast{
@@ -580,6 +607,13 @@ body.dnd-active{user-select:none;-webkit-user-select:none;}
       <div class="day-notes-wrap">
         <label for="day-notes">Note generali sulla giornata</label>
         <textarea id="day-notes" placeholder="Sensazioni, energie, cose da ricordare per la prossima volta..."></textarea>
+      </div>
+
+      <div class="editor-actions">
+        <button class="btn-save-template" id="btn-save-template">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21 12 16l-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          Salva come modello
+        </button>
       </div>
 
       <div class="editor-actions">
