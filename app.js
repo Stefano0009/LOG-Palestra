@@ -3,11 +3,11 @@
 
   /* ================= Dati esercizi ================= */
   const EXERCISE_GROUPS = {
-    "Gambe": ["Stacco", "Squat con bilanciere", "Squat su box", "Affondi", "Affondi con manubri", "Step up con manubri", "Leg extension", "Pressa", "Pressa orizzontale"],
-    "Dorso": ["Trazioni", "Pulley", "Lat machine (presa stretta)", "Lat machine con triangolo", "Lat machine avanti", "Rowing machine"],
-    "Petto": ["Panca", "Piegamenti declinati", "Piegamenti a terra", "Piegamenti facilitati", "Croci manubri"],
+    "Gambe": ["Stacco", "Squat con bilanciere", "Squat su box", "Affondi", "Affondi con manubri", "Step up con manubri", "Leg extension", "Pressa orizzontale"],
+    "Dorso": ["Trazioni", "Pulley", "Lat machine con triangolo", "Lat machine avanti", "Rowing machine"],
+    "Petto": ["Panca", "Piegamenti declinati", "Piegamenti a terra", "Piegamenti facilitati", "Croci ai cavi"],
     "Spalle": ["Military press", "Alzate laterali"],
-    "Braccia": ["Lat machine tricipiti", "Push down", "Hammer curl", "Curl ez"],
+    "Braccia": ["Push down", "Hammer curl", "Curl ez"],
     "Addome": ["Crunch", "Reverse Crunch", "Russian Twist"]
   };
 
@@ -453,9 +453,9 @@
       <div class="${cardClasses.join(" ")}" data-ex-id="${ex.id}">
         <div class="exercise-head">
           ${handleHtml}
-          ${iconHtml}
           ${canSelect ? checkboxHtml : ""}
           <h3 style="flex:1;">${escapeHtml(ex.name)}</h3>
+          ${iconHtml}
           ${!circuitSelectMode ? `<button class="remove-ex" title="Rimuovi esercizio">${ICON_TRASH}</button>` : ""}
         </div>
         <div class="tally">${tallies}</div>
