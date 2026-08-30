@@ -28,6 +28,15 @@
     return GROUP_ICONS[EXERCISE_TO_GROUP[exName]] || GROUP_ICONS["Addome"];
   }
 
+  const IMAGE_EXTS = ["jpg", "jpeg", "png", "webp"];
+  function slugifyExerciseName(name) {
+    return (name || "")
+      .toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+  }
+
   const BUILTIN_TEMPLATES = [
     { key: "libero", name: "Allenamento libero", desc: "Parti da zero e scegli tu", exercises: [] }
   ];
@@ -426,7 +435,19 @@
 
     const checkboxHtml = `<div class="select-checkbox ${isSelected ? "checked" : ""}">${isSelected ? ICON_CHECK : ""}</div>`;
     const handleHtml = showHandle ? dragHandleHtml(ex.id) : "";
-    const iconHtml = `<div class="ex-icon">${groupIconFor(ex.name)}</div>`;
+    const slug = slugifyExerciseName(ex.name);
+    const iconHtml = `
+      <div class="ex-photo-wrap" data-slug="${slug}">
+        <img
+          class="ex-photo"
+          src="images/${slug}.${IMAGE_EXTS[0]}"
+          data-tryindex="0"
+          alt="${escapeHtml(ex.name)}"
+          onerror="window.__tryNextExImg(this)"
+          onclick="window.__openExPhoto(this.src, '${escapeHtml(ex.name).replace(/'/g, "\\'")}')"
+        >
+        <div class="ex-icon-fallback">${groupIconFor(ex.name)}</div>
+      </div>`;
 
     return `
       <div class="${cardClasses.join(" ")}" data-ex-id="${ex.id}">
@@ -884,6 +905,41 @@
     const filename = `${filenameSafe || "giornata"}_${day.date || todayISO()}.pdf`;
     return { doc, filename };
   }
+
+  /* ================= Foto esercizio: fallback e lightbox ================= */
+  window.__tryNextExImg = function (imgEl) {
+    const wrap = imgEl.closest(".ex-photo-wrap");
+    const slug = wrap ? wrap.dataset.slug : "";
+    const nextIdx = parseInt(imgEl.dataset.tryindex || "0", 10) + 1;
+    if (nextIdx < IMAGE_EXTS.length) {
+      imgEl.dataset.tryindex = String(nextIdx);
+      imgEl.src = `images/${slug}.${IMAGE_EXTS[nextIdx]}`;
+    } else {
+      imgEl.style.display = "none";
+      if (wrap) {
+        const fb = wrap.querySelector(".ex-icon-fallback");
+        if (fb) fb.style.display = "flex";
+      }
+    }
+  };
+
+  window.__openExPhoto = function (src, name) {
+    const lb = document.getElementById("photo-lightbox");
+    const img = document.getElementById("photo-lightbox-img");
+    const caption = document.getElementById("photo-lightbox-caption");
+    if (!lb || !img) return;
+    img.src = src;
+    if (caption) caption.textContent = name || "";
+    lb.classList.add("open");
+  };
+
+  (function initLightbox() {
+    const lb = document.getElementById("photo-lightbox");
+    const closeBtn = document.getElementById("photo-lightbox-close");
+    if (!lb) return;
+    lb.addEventListener("click", (e) => { if (e.target === lb) lb.classList.remove("open"); });
+    if (closeBtn) closeBtn.addEventListener("click", () => lb.classList.remove("open"));
+  })();
 
   /* ================= Service worker ================= */
   if ("serviceWorker" in navigator) {
