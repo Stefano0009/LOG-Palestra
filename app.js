@@ -28,6 +28,12 @@
     return GROUP_ICONS[EXERCISE_TO_GROUP[exName]] || GROUP_ICONS["Addome"];
   }
 
+  const ANGLE_OPTIONS = ["0", "20", "30", "60", "90"];
+  const ANGLE_EXERCISES = new Set(["Panca"]);
+  function isAngleExercise(name) {
+    return ANGLE_EXERCISES.has(name);
+  }
+
   const IMAGE_EXTS = ["jpg", "jpeg", "png", "webp"];
   function slugifyExerciseName(name) {
     return (name || "")
@@ -249,12 +255,11 @@
       date: todayISO(),
       notes: "",
       createdAt: Date.now(),
-      exercises: tpl.exercises.map(name => ({
-        id: uid(),
-        name,
-        note: "",
-        sets: [{ reps: "", weight: "" }]
-      }))
+      exercises: tpl.exercises.map(name => {
+        const ex = { id: uid(), name, note: "", sets: [{ reps: "", weight: "" }] };
+        if (isAngleExercise(name)) ex.angle = "0";
+        return ex;
+      })
     };
     days.push(day);
     saveDays();
@@ -435,6 +440,10 @@
 
     const checkboxHtml = `<div class="select-checkbox ${isSelected ? "checked" : ""}">${isSelected ? ICON_CHECK : ""}</div>`;
     const handleHtml = showHandle ? dragHandleHtml(ex.id) : "";
+    const angleHtml = (isAngleExercise(ex.name) && !circuitSelectMode) ? `
+      <select class="angle-select" data-ex-id="${ex.id}" title="Angolo panca">
+        ${ANGLE_OPTIONS.map(a => `<option value="${a}" ${(ex.angle || "0") === a ? "selected" : ""}>${a}°</option>`).join("")}
+      </select>` : "";
     const slug = slugifyExerciseName(ex.name);
     const iconHtml = `
       <div class="ex-photo-wrap" data-slug="${slug}">
@@ -455,6 +464,7 @@
           ${handleHtml}
           ${canSelect ? checkboxHtml : ""}
           <h3 style="flex:1;">${escapeHtml(ex.name)}</h3>
+          ${angleHtml}
           ${iconHtml}
           ${!circuitSelectMode ? `<button class="remove-ex" title="Rimuovi esercizio">${ICON_TRASH}</button>` : ""}
         </div>
@@ -546,6 +556,14 @@
         ex.note = e.target.value;
         saveDays();
       });
+
+      const angleSelect = card.querySelector(".angle-select");
+      if (angleSelect) {
+        angleSelect.addEventListener("change", (e) => {
+          ex.angle = e.target.value;
+          saveDays();
+        });
+      }
     });
   }
 
@@ -670,7 +688,9 @@
     const day = getCurrentDay(); if (!day) return;
     const name = exerciseSelect.value;
     if (!name) return;
-    day.exercises.push({ id: uid(), name, note: "", sets: [{ reps: "", weight: "" }] });
+    const newEx = { id: uid(), name, note: "", sets: [{ reps: "", weight: "" }] };
+    if (isAngleExercise(name)) newEx.angle = "0";
+    day.exercises.push(newEx);
     saveDays();
     renderExercises(day);
     exerciseSelect.selectedIndex = 0;
@@ -807,7 +827,8 @@
         doc.setFont("helvetica", "bold");
         doc.setFontSize(13);
         doc.setTextColor(...INK);
-        doc.text(member.name, colX.name, y);
+        const displayName = member.angle && member.angle !== "0" ? `${member.name} (${member.angle}°)` : member.name;
+        doc.text(displayName, colX.name, y);
 
         if (group.length > 1) {
           const tagW = doc.getTextWidth("CIRCUITO") + 14;
