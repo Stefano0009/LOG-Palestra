@@ -707,11 +707,31 @@
   });
 
   /* ================= Esportazione PDF ================= */
-  document.getElementById("btn-export-pdf").addEventListener("click", () => {
+  document.getElementById("btn-export-pdf").addEventListener("click", async () => {
     const day = getCurrentDay();
     if (!day) return;
     try {
       const { doc, filename } = buildPdfDoc(day);
+
+      // Su browser che supportano la scelta/creazione cartella (es. Chrome/Edge desktop),
+      // propone il selettore di sistema; il browser tende a ricordare l'ultima cartella usata.
+      if (window.showSaveFilePicker) {
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: filename,
+            types: [{ description: "PDF", accept: { "application/pdf": [".pdf"] } }]
+          });
+          const writable = await handle.createWritable();
+          await writable.write(doc.output("blob"));
+          await writable.close();
+          showToast("PDF salvato");
+          return;
+        } catch (pickerErr) {
+          if (pickerErr && pickerErr.name === "AbortError") return;
+          // in caso di errore imprevisto, prosegue con il download normale sotto
+        }
+      }
+
       doc.save(filename);
       showToast("PDF scaricato");
     } catch (err) {
