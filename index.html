@@ -86,6 +86,14 @@ input,select,textarea{font-family:inherit;}
   font-weight:500;
 }
 .topbar h1{font-size:26px;}
+.menu-btn{
+  align-self:center;
+  background:var(--surface);border:1px solid var(--border);color:var(--text);
+  border-radius:100px;width:42px;height:42px;flex:none;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.menu-btn svg{width:19px;height:19px;}
+.menu-btn:active{background:var(--surface-2);}
 .topbar .back-btn{
   background:none;border:none;color:var(--text);
   font-size:15px;display:flex;align-items:center;gap:6px;
@@ -369,38 +377,108 @@ body.dnd-active{user-select:none;-webkit-user-select:none;}
 .note-wrap textarea::placeholder{color:var(--text-muted);}
 .note-wrap textarea:focus{outline:none;border-color:var(--accent);}
 
-.add-exercise-row{
-  display:flex;gap:10px;margin-bottom:18px;
-}
-.add-exercise-row select{
-  flex:1;
+.add-exercise-btn{
+  width:100%;
+  display:flex;align-items:center;justify-content:center;gap:8px;
   background:var(--surface);
-  border:1px solid var(--border);
+  border:1.5px dashed var(--border);
   color:var(--text);
   border-radius:var(--radius-sm);
-  padding:13px 12px;
-  font-size:14px;
-  appearance:none;
-  -webkit-appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23948C7E' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;
-  background-position:right 12px center;
-  padding-right:32px;
-}
-.add-exercise-row button{
-  background:var(--surface);
-  border:1px solid var(--border);
-  color:var(--text);
-  border-radius:var(--radius-sm);
-  padding:0 16px;
+  padding:15px;
   font-family:'Oswald';
   font-weight:600;
   text-transform:uppercase;
   font-size:13px;
   letter-spacing:.03em;
   cursor:pointer;
+  margin-bottom:18px;
 }
-.add-exercise-row button:active{background:var(--surface-2);}
+.add-exercise-btn svg{width:16px;height:16px;color:var(--accent-strong);}
+.add-exercise-btn:active{background:var(--surface-2);}
+
+/* ---------- Ricerca esercizi (modal) ---------- */
+.search-input{
+  width:100%;
+  background:var(--surface-2);
+  border:1px solid var(--border);
+  color:var(--text);
+  border-radius:var(--radius-sm);
+  padding:13px 14px;
+  font-size:15px;
+}
+.search-input:focus{outline:none;border-color:var(--accent);}
+.search-group-label{
+  font-family:'Oswald';font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text-muted);font-weight:600;padding:14px 4px 6px;
+}
+.search-result-item{
+  padding:13px 10px;font-size:15px;color:var(--text);
+  border-bottom:1px solid var(--border);cursor:pointer;
+}
+.search-result-item:active{background:var(--surface-2);}
+
+/* ---------- Menu / statistiche / peso corporeo ---------- */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px;
+}
+.stat-card.wide{grid-column:1 / -1;}
+.stat-card .stat-value{
+  font-family:'JetBrains Mono';font-size:26px;font-weight:700;color:var(--text);
+  line-height:1.1;
+}
+.stat-card .stat-label{
+  font-size:11px;color:var(--text-muted);text-transform:uppercase;
+  letter-spacing:.06em;margin-top:6px;
+}
+
+.progress-list-item{
+  display:flex;justify-content:space-between;align-items:center;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:14px 16px;margin-bottom:10px;cursor:pointer;
+}
+.progress-list-item .p-name{font-size:15px;color:var(--text);}
+.progress-list-item .p-value{font-family:'JetBrains Mono';color:var(--accent-strong);font-weight:700;font-size:15px;}
+.progress-list-item svg{width:17px;height:17px;color:var(--text-muted);}
+
+.progress-detail-header{
+  display:flex;align-items:center;gap:8px;margin-bottom:4px;color:var(--text-muted);
+  font-size:13px;cursor:pointer;
+}
+.progress-detail-header svg{width:15px;height:15px;}
+.progress-summary{display:flex;gap:12px;margin:16px 0;}
+.progress-summary .stat-card{flex:1;padding:14px;}
+.trend-chart-wrap{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px 8px 8px;margin:14px 0;
+}
+.trend-svg{width:100%;height:auto;display:block;}
+.chart-empty{
+  color:var(--text-muted);font-size:13px;text-align:center;padding:30px 10px;
+}
+.session-row{
+  display:flex;justify-content:space-between;padding:10px 4px;
+  border-bottom:1px solid var(--border);font-size:13.5px;
+}
+.session-row .s-date{color:var(--text-muted);}
+.session-row .s-value{font-family:'JetBrains Mono';color:var(--text);font-weight:600;}
+
+.bw-add-row{display:flex;gap:8px;margin:16px 0;}
+.bw-add-row button{
+  background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);
+  padding:0 18px;font-family:'Oswald';font-weight:600;text-transform:uppercase;
+  font-size:13px;letter-spacing:.03em;cursor:pointer;flex:none;
+}
+.bw-entry{
+  display:flex;justify-content:space-between;align-items:center;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:12px 14px;margin-bottom:8px;
+}
+.bw-entry .bw-date{color:var(--text-muted);font-size:13px;}
+.bw-entry .bw-value{font-family:'JetBrains Mono';font-weight:700;font-size:15px;}
+.bw-entry .bw-delete{background:none;border:none;color:var(--text-muted);padding:4px;cursor:pointer;}
+.bw-entry .bw-delete svg{width:16px;height:16px;}
 
 /* ---------- Circuito ---------- */
 .toolbar-row{display:flex;justify-content:flex-end;margin:-4px 0 14px;}
@@ -620,8 +698,56 @@ body.dnd-active{user-select:none;-webkit-user-select:none;}
         <span class="eyebrow" id="home-date-eyebrow"></span>
         <h1>Log Palestra</h1>
       </div>
+      <button class="menu-btn" id="btn-open-menu" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+      </button>
     </div>
     <div id="home-content" style="padding:4px 0 10px;"></div>
+  </div>
+
+  <!-- ===== STATISTICHE ===== -->
+  <div id="view-stats" class="view">
+    <div class="topbar">
+      <button class="back-btn" id="btn-back-stats">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Indietro
+      </button>
+    </div>
+    <div style="padding:0 20px 50px;">
+      <h1 style="font-size:24px;margin-bottom:18px;">Statistiche</h1>
+      <div class="stats-grid" id="stats-grid"></div>
+    </div>
+  </div>
+
+  <!-- ===== PROGRESSI ESERCIZI ===== -->
+  <div id="view-progress" class="view">
+    <div class="topbar">
+      <button class="back-btn" id="btn-back-progress">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Indietro
+      </button>
+    </div>
+    <div style="padding:0 20px 50px;" id="progress-content"></div>
+  </div>
+
+  <!-- ===== PESO CORPOREO ===== -->
+  <div id="view-bodyweight" class="view">
+    <div class="topbar">
+      <button class="back-btn" id="btn-back-bw">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Indietro
+      </button>
+    </div>
+    <div style="padding:0 20px 50px;">
+      <h1 style="font-size:24px;margin-bottom:14px;">Peso corporeo</h1>
+      <div id="bw-chart-wrap"></div>
+      <div class="bw-add-row">
+        <input type="date" id="bw-date-input" class="date-input" style="flex:1;">
+        <input type="number" id="bw-weight-input" class="date-input" style="flex:1;" placeholder="kg" step="0.1" inputmode="decimal">
+        <button id="btn-bw-add">Aggiungi</button>
+      </div>
+      <div id="bw-list"></div>
+    </div>
   </div>
 
   <!-- ===== DAY EDITOR ===== -->
@@ -649,10 +775,10 @@ body.dnd-active{user-select:none;-webkit-user-select:none;}
 
       <div id="exercise-list"></div>
 
-      <div class="add-exercise-row">
-        <select id="exercise-select"></select>
-        <button id="btn-add-exercise">Aggiungi</button>
-      </div>
+      <button class="add-exercise-btn" id="btn-open-add-exercise">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Aggiungi esercizio
+      </button>
 
       <div class="day-notes-wrap">
         <label for="day-notes">Note generali sulla giornata</label>
@@ -693,6 +819,23 @@ body.dnd-active{user-select:none;-webkit-user-select:none;}
   <div class="modal-sheet">
     <h2>Che giornata è?</h2>
     <div id="template-list"></div>
+  </div>
+</div>
+
+<!-- Modal: menu -->
+<div class="modal-overlay" id="modal-menu">
+  <div class="modal-sheet">
+    <h2>Menu</h2>
+    <div id="menu-list"></div>
+  </div>
+</div>
+
+<!-- Modal: aggiungi esercizio -->
+<div class="modal-overlay" id="modal-add-exercise">
+  <div class="modal-sheet" style="max-height:78vh;display:flex;flex-direction:column;">
+    <h2>Aggiungi esercizio</h2>
+    <input type="text" id="exercise-search-input" class="search-input" placeholder="Cerca esercizio...">
+    <div id="exercise-search-results" style="overflow-y:auto;flex:1;margin-top:4px;"></div>
   </div>
 </div>
 
