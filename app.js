@@ -49,6 +49,7 @@
 
   const STORAGE_KEY = "logpalestra_days_v1";
   const TEMPLATES_KEY = "logpalestra_templates_v1";
+  const BODYWEIGHT_KEY = "logpalestra_bodyweight_v1";
   const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
   const ICON_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
   const ICON_CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
@@ -62,10 +63,12 @@
   /* ================= Stato / persistenza ================= */
   let days = loadDays();
   let customTemplates = loadTemplates();
+  let bodyweightEntries = loadBodyweight();
   let currentDayId = null;
   let circuitSelectMode = false;
   let selectedForCircuit = [];
   let dnd = null;
+  let progressDetailExercise = null;
 
   function loadDays() {
     try {
@@ -84,6 +87,15 @@
   }
   function saveTemplates() {
     localStorage.setItem(TEMPLATES_KEY, JSON.stringify(customTemplates));
+  }
+  function loadBodyweight() {
+    try {
+      const raw = localStorage.getItem(BODYWEIGHT_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+  }
+  function saveBodyweight() {
+    localStorage.setItem(BODYWEIGHT_KEY, JSON.stringify(bodyweightEntries));
   }
   function uid() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -116,20 +128,26 @@
   /* ================= Elementi DOM ================= */
   const viewHome = document.getElementById("view-home");
   const viewDay = document.getElementById("view-day");
+  const viewStats = document.getElementById("view-stats");
+  const viewProgress = document.getElementById("view-progress");
+  const viewBodyweight = document.getElementById("view-bodyweight");
   const homeContent = document.getElementById("home-content");
   const homeEyebrow = document.getElementById("home-date-eyebrow");
   const fabNew = document.getElementById("fab-new");
   const modalNewDay = document.getElementById("modal-newday");
   const templateList = document.getElementById("template-list");
   const exerciseList = document.getElementById("exercise-list");
-  const exerciseSelect = document.getElementById("exercise-select");
   const dayTitleInput = document.getElementById("day-title-input");
   const dayDateInput = document.getElementById("day-date-input");
   const dayNotesInput = document.getElementById("day-notes");
 
   /* ================= Router semplice ================= */
+  const ALL_VIEWS = [viewHome, viewDay, viewStats, viewProgress, viewBodyweight];
+  function hideAllViews() {
+    ALL_VIEWS.forEach(v => v.classList.remove("active"));
+  }
   function showHome(pushHistory) {
-    viewDay.classList.remove("active");
+    hideAllViews();
     viewHome.classList.add("active");
     fabNew.classList.remove("hidden");
     currentDayId = null;
@@ -138,15 +156,43 @@
   }
   function showDay(dayId, pushHistory) {
     currentDayId = dayId;
-    viewHome.classList.remove("active");
+    hideAllViews();
     viewDay.classList.add("active");
     fabNew.classList.add("hidden");
     renderDayEditor();
     if (pushHistory !== false) history.pushState({ view: "day", id: dayId }, "", "#giorno-" + dayId);
   }
+  function showStats(pushHistory) {
+    hideAllViews();
+    viewStats.classList.add("active");
+    fabNew.classList.add("hidden");
+    renderStats();
+    if (pushHistory !== false) history.pushState({ view: "stats" }, "", "#statistiche");
+  }
+  function showProgress(exerciseName, pushHistory) {
+    hideAllViews();
+    viewProgress.classList.add("active");
+    fabNew.classList.add("hidden");
+    progressDetailExercise = exerciseName || null;
+    renderProgress();
+    if (pushHistory !== false) {
+      const hash = exerciseName ? "#progressi-" + encodeURIComponent(exerciseName) : "#progressi";
+      history.pushState({ view: "progress", exercise: exerciseName || null }, "", hash);
+    }
+  }
+  function showBodyweight(pushHistory) {
+    hideAllViews();
+    viewBodyweight.classList.add("active");
+    fabNew.classList.add("hidden");
+    renderBodyweight();
+    if (pushHistory !== false) history.pushState({ view: "bodyweight" }, "", "#peso");
+  }
   window.addEventListener("popstate", (e) => {
     const st = e.state;
     if (st && st.view === "day") showDay(st.id, false);
+    else if (st && st.view === "stats") showStats(false);
+    else if (st && st.view === "progress") showProgress(st.exercise, false);
+    else if (st && st.view === "bodyweight") showBodyweight(false);
     else showHome(false);
   });
 
@@ -295,15 +341,47 @@
   });
 
   /* ================= Render: editor giornata ================= */
-  function populateExerciseSelect() {
-    exerciseSelect.innerHTML = `<option value="" disabled selected>Aggiungi esercizio...</option>` +
-      Object.entries(EXERCISE_GROUPS).map(([group, list]) => `
-        <optgroup label="${group}">
-          ${list.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("")}
-        </optgroup>
-      `).join("");
+  /* ================= Aggiungi esercizio: ricerca ================= */
+  const modalAddExercise = document.getElementById("modal-add-exercise");
+  const exerciseSearchInput = document.getElementById("exercise-search-input");
+  const exerciseSearchResults = document.getElementById("exercise-search-results");
+
+  function renderExerciseSearchResults(query) {
+    const q = (query || "").trim().toLowerCase();
+    let html = "";
+    Object.entries(EXERCISE_GROUPS).forEach(([group, list]) => {
+      const filtered = list.filter(name => name.toLowerCase().includes(q));
+      if (filtered.length === 0) return;
+      html += `<div class="search-group-label">${escapeHtml(group)}</div>`;
+      html += filtered.map(name => `<div class="search-result-item" data-name="${escapeHtml(name)}">${escapeHtml(name)}</div>`).join("");
+    });
+    exerciseSearchResults.innerHTML = html || `<p class="modal-hint">Nessun esercizio trovato.</p>`;
+    exerciseSearchResults.querySelectorAll(".search-result-item").forEach(el => {
+      el.addEventListener("click", () => {
+        addExerciseToCurrentDay(el.dataset.name);
+        modalAddExercise.classList.remove("open");
+      });
+    });
   }
-  populateExerciseSelect();
+
+  function addExerciseToCurrentDay(name) {
+    const day = getCurrentDay();
+    if (!day) return;
+    const newEx = { id: uid(), name, note: "", sets: [{ reps: "", weight: "" }] };
+    if (isAngleExercise(name)) newEx.angle = "0";
+    day.exercises.push(newEx);
+    saveDays();
+    renderExercises(day);
+  }
+
+  document.getElementById("btn-open-add-exercise").addEventListener("click", () => {
+    exerciseSearchInput.value = "";
+    renderExerciseSearchResults("");
+    modalAddExercise.classList.add("open");
+    setTimeout(() => exerciseSearchInput.focus(), 60);
+  });
+  exerciseSearchInput.addEventListener("input", (e) => renderExerciseSearchResults(e.target.value));
+  modalAddExercise.addEventListener("click", (e) => { if (e.target === modalAddExercise) modalAddExercise.classList.remove("open"); });
 
   function getCurrentDay() {
     return days.find(d => d.id === currentDayId);
@@ -316,7 +394,6 @@
     dayTitleInput.value = day.title || "";
     dayDateInput.value = day.date || todayISO();
     dayNotesInput.value = day.notes || "";
-    exerciseSelect.selectedIndex = 0;
     circuitSelectMode = false;
     selectedForCircuit = [];
 
@@ -684,19 +761,40 @@
     showToast("Circuito creato");
   });
 
-  document.getElementById("btn-add-exercise").addEventListener("click", () => {
-    const day = getCurrentDay(); if (!day) return;
-    const name = exerciseSelect.value;
-    if (!name) return;
-    const newEx = { id: uid(), name, note: "", sets: [{ reps: "", weight: "" }] };
-    if (isAngleExercise(name)) newEx.angle = "0";
-    day.exercises.push(newEx);
-    saveDays();
-    renderExercises(day);
-    exerciseSelect.selectedIndex = 0;
-  });
-
   document.getElementById("btn-back").addEventListener("click", () => history.back());
+  document.getElementById("btn-back-stats").addEventListener("click", () => history.back());
+  document.getElementById("btn-back-progress").addEventListener("click", () => history.back());
+  document.getElementById("btn-back-bw").addEventListener("click", () => history.back());
+
+  /* ================= Menu ================= */
+  const modalMenu = document.getElementById("modal-menu");
+  const menuList = document.getElementById("menu-list");
+  const MENU_ITEMS = [
+    { action: "stats", name: "Statistiche", desc: "Riepilogo generale dei tuoi allenamenti" },
+    { action: "progress", name: "Progressi esercizi", desc: "Andamento dei pesi nel tempo" },
+    { action: "bodyweight", name: "Peso corporeo", desc: "Tieni traccia del tuo peso" }
+  ];
+  menuList.innerHTML = MENU_ITEMS.map(m => `
+    <div class="template-option" data-action="${m.action}">
+      <div>
+        <div class="t-name">${m.name}</div>
+        <div class="t-desc">${m.desc}</div>
+      </div>
+      ${ICON_CHEV}
+    </div>
+  `).join("");
+  menuList.querySelectorAll(".template-option").forEach(el => {
+    el.addEventListener("click", () => {
+      modalMenu.classList.remove("open");
+      const action = el.dataset.action;
+      if (action === "stats") showStats(true);
+      else if (action === "progress") showProgress(null, true);
+      else if (action === "bodyweight") showBodyweight(true);
+    });
+  });
+  document.getElementById("btn-open-menu").addEventListener("click", () => modalMenu.classList.add("open"));
+  modalMenu.addEventListener("click", (e) => { if (e.target === modalMenu) modalMenu.classList.remove("open"); });
+
 
   document.getElementById("btn-delete-day").addEventListener("click", () => {
     const day = getCurrentDay(); if (!day) return;
@@ -704,6 +802,235 @@
     days = days.filter(d => d.id !== day.id);
     saveDays();
     history.back();
+  });
+
+  /* ================= Grafico SVG condiviso ================= */
+  function buildTrendSVG(points, opts) {
+    opts = opts || {};
+    const width = opts.width || 320;
+    const height = opts.height || 150;
+    if (!points || points.length === 0) {
+      return `<div class="chart-empty">Ancora nessun dato da mostrare</div>`;
+    }
+    if (points.length === 1) {
+      return `<div class="chart-empty">Serve almeno un secondo dato per vedere l'andamento<br><span class="mono" style="color:var(--text);font-size:15px;">${points[0].value}${opts.unit || ""}</span></div>`;
+    }
+    const values = points.map(p => p.value);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = (max - min) || 1;
+    const padX = 14, padY = 16;
+    const stepX = (width - 2 * padX) / (points.length - 1);
+    const coords = points.map((p, i) => ({
+      x: padX + i * stepX,
+      y: height - padY - ((p.value - min) / range) * (height - 2 * padY)
+    }));
+    const pathD = coords.map((c, i) => (i === 0 ? "M" : "L") + c.x.toFixed(1) + "," + c.y.toFixed(1)).join(" ");
+    const areaD = pathD + ` L${coords[coords.length - 1].x.toFixed(1)},${height - padY} L${coords[0].x.toFixed(1)},${height - padY} Z`;
+    const dots = coords.map(c => `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="3.5" fill="var(--accent)"/>`).join("");
+    return `<svg viewBox="0 0 ${width} ${height}" class="trend-svg" preserveAspectRatio="none">
+      <path d="${areaD}" fill="var(--accent)" opacity="0.14"/>
+      <path d="${pathD}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      ${dots}
+    </svg>`;
+  }
+
+  /* ================= Statistiche ================= */
+  function computeStats() {
+    const totalWorkouts = days.length;
+    const currentMonthPrefix = todayISO().slice(0, 7);
+    const thisMonthCount = days.filter(d => (d.date || "").startsWith(currentMonthPrefix)).length;
+    const exerciseCounts = {};
+    let totalVolume = 0;
+    let totalSets = 0;
+    days.forEach(day => {
+      day.exercises.forEach(ex => {
+        exerciseCounts[ex.name] = (exerciseCounts[ex.name] || 0) + 1;
+        ex.sets.forEach(s => {
+          const w = parseFloat(s.weight);
+          const r = parseInt(s.reps, 10);
+          if (s.reps !== "" || s.weight !== "") totalSets++;
+          if (!isNaN(w) && !isNaN(r)) totalVolume += w * r;
+        });
+      });
+    });
+    let topExercise = null, topCount = 0;
+    Object.entries(exerciseCounts).forEach(([name, count]) => {
+      if (count > topCount) { topCount = count; topExercise = name; }
+    });
+    return { totalWorkouts, thisMonthCount, totalVolume, totalSets, topExercise, topCount };
+  }
+
+  function renderStats() {
+    const s = computeStats();
+    const grid = document.getElementById("stats-grid");
+    if (s.totalWorkouts === 0) {
+      grid.innerHTML = `<div class="stat-card wide"><div class="chart-empty" style="padding:10px 0;">Registra la tua prima giornata per vedere le statistiche.</div></div>`;
+      return;
+    }
+    grid.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-value">${s.totalWorkouts}</div>
+        <div class="stat-label">Allenamenti totali</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${s.thisMonthCount}</div>
+        <div class="stat-label">Questo mese</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${s.totalSets}</div>
+        <div class="stat-label">Serie totali</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${Math.round(s.totalVolume).toLocaleString("it-IT")}</div>
+        <div class="stat-label">Kg totali sollevati</div>
+      </div>
+      <div class="stat-card wide">
+        <div class="stat-value" style="font-size:19px;">${s.topExercise ? escapeHtml(s.topExercise) : "\u2013"}</div>
+        <div class="stat-label">Esercizio pi\u00f9 eseguito${s.topExercise ? ` (${s.topCount} volte)` : ""}</div>
+      </div>
+    `;
+  }
+
+  /* ================= Progressi esercizi ================= */
+  function getLoggedExerciseNames() {
+    const set = new Set();
+    days.forEach(day => day.exercises.forEach(ex => {
+      if (ex.sets.some(s => s.weight !== "")) set.add(ex.name);
+    }));
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "it"));
+  }
+
+  function getExerciseProgressData(name) {
+    const points = [];
+    const sorted = [...days].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+    sorted.forEach(day => {
+      let maxW = null;
+      day.exercises.forEach(ex => {
+        if (ex.name !== name) return;
+        ex.sets.forEach(s => {
+          const w = parseFloat(s.weight);
+          if (!isNaN(w) && (maxW === null || w > maxW)) maxW = w;
+        });
+      });
+      if (maxW !== null) points.push({ label: formatDateShort(day.date), value: maxW, date: day.date });
+    });
+    return points;
+  }
+
+  function renderProgress() {
+    const content = document.getElementById("progress-content");
+    if (!progressDetailExercise) {
+      const names = getLoggedExerciseNames();
+      let html = `<h1 style="font-size:24px;margin-bottom:14px;">Progressi esercizi</h1>`;
+      if (names.length === 0) {
+        html += `<div class="chart-empty" style="padding:30px 0;">Registra qualche peso in un allenamento per vedere qui i tuoi progressi.</div>`;
+      } else {
+        html += `<input type="text" id="progress-search-input" class="search-input" placeholder="Cerca esercizio..." style="margin-bottom:14px;">`;
+        html += `<div id="progress-list"></div>`;
+      }
+      content.innerHTML = html;
+      if (names.length > 0) {
+        const listEl = document.getElementById("progress-list");
+        const searchEl = document.getElementById("progress-search-input");
+        function renderList(query) {
+          const q = (query || "").trim().toLowerCase();
+          const filtered = names.filter(n => n.toLowerCase().includes(q));
+          listEl.innerHTML = filtered.map(name => {
+            const pts = getExerciseProgressData(name);
+            const last = pts[pts.length - 1];
+            return `
+              <div class="progress-list-item" data-name="${escapeHtml(name)}">
+                <span class="p-name">${escapeHtml(name)}</span>
+                <span class="p-value">${last ? last.value + " kg" : ""}</span>
+              </div>`;
+          }).join("") || `<p class="modal-hint">Nessun esercizio trovato.</p>`;
+          listEl.querySelectorAll(".progress-list-item").forEach(el => {
+            el.addEventListener("click", () => showProgress(el.dataset.name, true));
+          });
+        }
+        renderList("");
+        searchEl.addEventListener("input", (e) => renderList(e.target.value));
+      }
+      return;
+    }
+
+    const name = progressDetailExercise;
+    const points = getExerciseProgressData(name);
+    const maxPoint = points.reduce((best, p) => (!best || p.value > best.value) ? p : best, null);
+    const lastPoint = points[points.length - 1];
+
+    content.innerHTML = `
+      <div class="progress-detail-header" id="progress-back-to-list">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Tutti gli esercizi
+      </div>
+      <h1 style="font-size:22px;margin-bottom:4px;">${escapeHtml(name)}</h1>
+      <div class="progress-summary">
+        <div class="stat-card">
+          <div class="stat-value">${maxPoint ? maxPoint.value : "\u2013"}</div>
+          <div class="stat-label">Massimale (kg)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${lastPoint ? lastPoint.value : "\u2013"}</div>
+          <div class="stat-label">Ultima volta (kg)</div>
+        </div>
+      </div>
+      <div class="trend-chart-wrap">${buildTrendSVG(points, { unit: " kg" })}</div>
+      <div id="progress-sessions"></div>
+    `;
+    const sessionsEl = document.getElementById("progress-sessions");
+    sessionsEl.innerHTML = [...points].reverse().map(p => `
+      <div class="session-row">
+        <span class="s-date">${escapeHtml(p.label)}</span>
+        <span class="s-value">${p.value} kg</span>
+      </div>
+    `).join("");
+    document.getElementById("progress-back-to-list").addEventListener("click", () => history.back());
+  }
+
+  /* ================= Peso corporeo ================= */
+  function renderBodyweight() {
+    const chartWrap = document.getElementById("bw-chart-wrap");
+    const sorted = [...bodyweightEntries].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+    const points = sorted.map(e => ({ label: formatDateShort(e.date), value: e.weight }));
+    chartWrap.innerHTML = `<div class="trend-chart-wrap">${buildTrendSVG(points, { unit: " kg" })}</div>`;
+
+    document.getElementById("bw-date-input").value = todayISO();
+
+    const listEl = document.getElementById("bw-list");
+    const displayOrder = [...bodyweightEntries].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    listEl.innerHTML = displayOrder.map(e => `
+      <div class="bw-entry" data-id="${e.id}">
+        <span class="bw-date">${formatDateHuman(e.date)}</span>
+        <span class="bw-value">${e.weight} kg</span>
+        <button class="bw-delete" data-id="${e.id}" title="Elimina">${ICON_X}</button>
+      </div>
+    `).join("") || `<p class="modal-hint">Nessun peso registrato ancora.</p>`;
+
+    listEl.querySelectorAll(".bw-delete").forEach(btn => {
+      btn.addEventListener("click", () => {
+        bodyweightEntries = bodyweightEntries.filter(e => e.id !== btn.dataset.id);
+        saveBodyweight();
+        renderBodyweight();
+      });
+    });
+  }
+
+  document.getElementById("btn-bw-add").addEventListener("click", () => {
+    const dateVal = document.getElementById("bw-date-input").value || todayISO();
+    const weightVal = parseFloat(document.getElementById("bw-weight-input").value);
+    if (isNaN(weightVal) || weightVal <= 0) {
+      showToast("Inserisci un peso valido");
+      return;
+    }
+    const existing = bodyweightEntries.find(e => e.date === dateVal);
+    if (existing) existing.weight = weightVal;
+    else bodyweightEntries.push({ id: uid(), date: dateVal, weight: weightVal });
+    saveBodyweight();
+    document.getElementById("bw-weight-input").value = "";
+    renderBodyweight();
+    showToast("Peso registrato");
   });
 
   /* ================= Esportazione PDF ================= */
