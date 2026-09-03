@@ -893,29 +893,56 @@
   }
 
   /* ================= Progressi esercizi ================= */
+  // Un esercizio è "a ripetizioni" (corpo libero) se in tutto lo storico non è mai
+  // stato registrato un peso maggiore di zero: in quel caso il peso resterebbe
+  // sempre 0 e non avrebbe senso mostrarlo come indicatore di progresso.
+  function getExerciseMetricType(name) {
+    let hasWeight = false;
+    let hasReps = false;
+    days.forEach(day => day.exercises.forEach(ex => {
+      if (ex.name !== name) return;
+      ex.sets.forEach(s => {
+        const w = parseFloat(s.weight);
+        const r = parseInt(s.reps, 10);
+        if (!isNaN(w) && w > 0) hasWeight = true;
+        if (!isNaN(r)) hasReps = true;
+      });
+    }));
+    if (hasWeight) return "weight";
+    if (hasReps) return "reps";
+    return null;
+  }
+
   function getLoggedExerciseNames() {
     const set = new Set();
     days.forEach(day => day.exercises.forEach(ex => {
-      if (ex.sets.some(s => s.weight !== "")) set.add(ex.name);
+      const logged = ex.sets.some(s => s.weight !== "" || s.reps !== "");
+      if (logged) set.add(ex.name);
     }));
     return Array.from(set).sort((a, b) => a.localeCompare(b, "it"));
   }
 
   function getExerciseProgressData(name) {
+    const metric = getExerciseMetricType(name);
     const points = [];
     const sorted = [...days].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
     sorted.forEach(day => {
-      let maxW = null;
+      let best = null;
       day.exercises.forEach(ex => {
         if (ex.name !== name) return;
         ex.sets.forEach(s => {
-          const w = parseFloat(s.weight);
-          if (!isNaN(w) && (maxW === null || w > maxW)) maxW = w;
+          if (metric === "reps") {
+            const r = parseInt(s.reps, 10);
+            if (!isNaN(r) && (best === null || r > best)) best = r;
+          } else {
+            const w = parseFloat(s.weight);
+            if (!isNaN(w) && (best === null || w > best)) best = w;
+          }
         });
       });
-      if (maxW !== null) points.push({ label: formatDateShort(day.date), value: maxW, date: day.date });
+      if (best !== null) points.push({ label: formatDateShort(day.date), value: best, date: day.date });
     });
-    return points;
+    return { points, metric: metric || "weight" };
   }
 
   function renderProgress() {
@@ -937,12 +964,13 @@
           const q = (query || "").trim().toLowerCase();
           const filtered = names.filter(n => n.toLowerCase().includes(q));
           listEl.innerHTML = filtered.map(name => {
-            const pts = getExerciseProgressData(name);
+            const { points: pts, metric } = getExerciseProgressData(name);
             const last = pts[pts.length - 1];
+            const unit = metric === "reps" ? " rip." : " kg";
             return `
               <div class="progress-list-item" data-name="${escapeHtml(name)}">
                 <span class="p-name">${escapeHtml(name)}</span>
-                <span class="p-value">${last ? last.value + " kg" : ""}</span>
+                <span class="p-value">${last ? last.value + unit : ""}</span>
               </div>`;
           }).join("") || `<p class="modal-hint">Nessun esercizio trovato.</p>`;
           listEl.querySelectorAll(".progress-list-item").forEach(el => {
@@ -956,7 +984,11 @@
     }
 
     const name = progressDetailExercise;
-    const points = getExerciseProgressData(name);
+    const { points, metric } = getExerciseProgressData(name);
+    const isReps = metric === "reps";
+    const unit = isReps ? " rip." : " kg";
+    const maxLabel = isReps ? "Massimale (rip.)" : "Massimale (kg)";
+    const lastLabel = isReps ? "Ultima volta (rip.)" : "Ultima volta (kg)";
     const maxPoint = points.reduce((best, p) => (!best || p.value > best.value) ? p : best, null);
     const lastPoint = points[points.length - 1];
 
@@ -969,21 +1001,21 @@
       <div class="progress-summary">
         <div class="stat-card">
           <div class="stat-value">${maxPoint ? maxPoint.value : "\u2013"}</div>
-          <div class="stat-label">Massimale (kg)</div>
+          <div class="stat-label">${maxLabel}</div>
         </div>
         <div class="stat-card">
           <div class="stat-value">${lastPoint ? lastPoint.value : "\u2013"}</div>
-          <div class="stat-label">Ultima volta (kg)</div>
+          <div class="stat-label">${lastLabel}</div>
         </div>
       </div>
-      <div class="trend-chart-wrap">${buildTrendSVG(points, { unit: " kg" })}</div>
+      <div class="trend-chart-wrap">${buildTrendSVG(points, { unit })}</div>
       <div id="progress-sessions"></div>
     `;
     const sessionsEl = document.getElementById("progress-sessions");
     sessionsEl.innerHTML = [...points].reverse().map(p => `
       <div class="session-row">
         <span class="s-date">${escapeHtml(p.label)}</span>
-        <span class="s-value">${p.value} kg</span>
+        <span class="s-value">${p.value}${unit}</span>
       </div>
     `).join("");
     document.getElementById("progress-back-to-list").addEventListener("click", () => history.back());
