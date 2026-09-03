@@ -750,6 +750,32 @@ body.dnd-active{user-select:none;-webkit-user-select:none;}
     </div>
   </div>
 
+  <!-- ===== BACKUP DATI ===== -->
+  <div id="view-backup" class="view">
+    <div class="topbar">
+      <button class="back-btn" id="btn-back-backup">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Indietro
+      </button>
+    </div>
+    <div style="padding:0 20px 50px;">
+      <h1 style="font-size:24px;margin-bottom:14px;">Backup dati</h1>
+      <p class="modal-hint" style="margin-bottom:22px;">
+        Allenamenti, modelli personalizzati e peso corporeo sono salvati solo su questo telefono. Se cancelli i dati del browser o cambi telefono li perdi: esporta un backup per metterli al sicuro, oppure importane uno per ripristinarli.
+      </p>
+      <button class="btn-export" id="btn-backup-export" style="width:100%;margin-bottom:12px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><path d="M4 19h16"/></svg>
+        Esporta backup
+      </button>
+      <button class="btn-save-template" id="btn-backup-import">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9"/><polyline points="7 14 12 9 17 14"/><path d="M4 5h16"/></svg>
+        Importa backup
+      </button>
+      <input type="file" id="backup-file-input" accept="application/json,.json" style="display:none;">
+      <div id="backup-info" class="modal-hint" style="margin-top:18px;"></div>
+    </div>
+  </div>
+
   <!-- ===== DAY EDITOR ===== -->
   <div id="view-day" class="view">
     <div class="topbar">
