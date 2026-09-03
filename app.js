@@ -131,6 +131,7 @@
   const viewStats = document.getElementById("view-stats");
   const viewProgress = document.getElementById("view-progress");
   const viewBodyweight = document.getElementById("view-bodyweight");
+  const viewBackup = document.getElementById("view-backup");
   const homeContent = document.getElementById("home-content");
   const homeEyebrow = document.getElementById("home-date-eyebrow");
   const fabNew = document.getElementById("fab-new");
@@ -142,7 +143,7 @@
   const dayNotesInput = document.getElementById("day-notes");
 
   /* ================= Router semplice ================= */
-  const ALL_VIEWS = [viewHome, viewDay, viewStats, viewProgress, viewBodyweight];
+  const ALL_VIEWS = [viewHome, viewDay, viewStats, viewProgress, viewBodyweight, viewBackup];
   function hideAllViews() {
     ALL_VIEWS.forEach(v => v.classList.remove("active"));
   }
@@ -187,12 +188,20 @@
     renderBodyweight();
     if (pushHistory !== false) history.pushState({ view: "bodyweight" }, "", "#peso");
   }
+  function showBackup(pushHistory) {
+    hideAllViews();
+    viewBackup.classList.add("active");
+    fabNew.classList.add("hidden");
+    document.getElementById("backup-info").textContent = "";
+    if (pushHistory !== false) history.pushState({ view: "backup" }, "", "#backup");
+  }
   window.addEventListener("popstate", (e) => {
     const st = e.state;
     if (st && st.view === "day") showDay(st.id, false);
     else if (st && st.view === "stats") showStats(false);
     else if (st && st.view === "progress") showProgress(st.exercise, false);
     else if (st && st.view === "bodyweight") showBodyweight(false);
+    else if (st && st.view === "backup") showBackup(false);
     else showHome(false);
   });
 
@@ -765,6 +774,7 @@
   document.getElementById("btn-back-stats").addEventListener("click", () => history.back());
   document.getElementById("btn-back-progress").addEventListener("click", () => history.back());
   document.getElementById("btn-back-bw").addEventListener("click", () => history.back());
+  document.getElementById("btn-back-backup").addEventListener("click", () => history.back());
 
   /* ================= Menu ================= */
   const modalMenu = document.getElementById("modal-menu");
@@ -772,7 +782,8 @@
   const MENU_ITEMS = [
     { action: "stats", name: "Statistiche", desc: "Riepilogo generale dei tuoi allenamenti" },
     { action: "progress", name: "Progressi esercizi", desc: "Andamento dei pesi nel tempo" },
-    { action: "bodyweight", name: "Peso corporeo", desc: "Tieni traccia del tuo peso" }
+    { action: "bodyweight", name: "Peso corporeo", desc: "Tieni traccia del tuo peso" },
+    { action: "backup", name: "Backup dati", desc: "Esporta o ripristina i tuoi dati" }
   ];
   menuList.innerHTML = MENU_ITEMS.map(m => `
     <div class="template-option" data-action="${m.action}">
@@ -790,6 +801,7 @@
       if (action === "stats") showStats(true);
       else if (action === "progress") showProgress(null, true);
       else if (action === "bodyweight") showBodyweight(true);
+      else if (action === "backup") showBackup(true);
     });
   });
   document.getElementById("btn-open-menu").addEventListener("click", () => modalMenu.classList.add("open"));
@@ -802,6 +814,74 @@
     days = days.filter(d => d.id !== day.id);
     saveDays();
     history.back();
+  });
+
+  /* ================= Backup dati ================= */
+  const BACKUP_VERSION = 1;
+  function buildBackupObject() {
+    return {
+      app: "LOG-Palestra",
+      version: BACKUP_VERSION,
+      exportedAt: new Date().toISOString(),
+      days,
+      customTemplates,
+      bodyweightEntries
+    };
+  }
+  document.getElementById("btn-backup-export").addEventListener("click", () => {
+    const data = buildBackupObject();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = todayISO();
+    a.href = url;
+    a.download = `logpalestra-backup-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    document.getElementById("backup-info").textContent = `Backup esportato (${days.length} giornate, ${bodyweightEntries.length} pesature).`;
+    showToast("Backup esportato");
+  });
+
+  const backupFileInput = document.getElementById("backup-file-input");
+  document.getElementById("btn-backup-import").addEventListener("click", () => backupFileInput.click());
+  backupFileInput.addEventListener("change", () => {
+    const file = backupFileInput.files && backupFileInput.files[0];
+    backupFileInput.value = "";
+    if (!file) return;
+    const infoEl = document.getElementById("backup-info");
+    const reader = new FileReader();
+    reader.onload = () => {
+      let parsed;
+      try {
+        parsed = JSON.parse(reader.result);
+      } catch (e) {
+        infoEl.textContent = "File non valido: non è un backup JSON leggibile.";
+        return;
+      }
+      if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.days)) {
+        infoEl.textContent = "File non valido: non sembra un backup di LOG-Palestra.";
+        return;
+      }
+      const dayCount = parsed.days.length;
+      const bwCount = Array.isArray(parsed.bodyweightEntries) ? parsed.bodyweightEntries.length : 0;
+      const ok = confirm(
+        `Importare questo backup?\n\n${dayCount} giornate, ${bwCount} pesature.\n\n` +
+        `I dati attuali su questo telefono verranno sostituiti e non potranno essere recuperati.`
+      );
+      if (!ok) return;
+      days = parsed.days;
+      customTemplates = Array.isArray(parsed.customTemplates) ? parsed.customTemplates : [];
+      bodyweightEntries = Array.isArray(parsed.bodyweightEntries) ? parsed.bodyweightEntries : [];
+      saveDays();
+      saveTemplates();
+      saveBodyweight();
+      infoEl.textContent = `Backup importato: ${dayCount} giornate, ${bwCount} pesature.`;
+      showToast("Backup importato");
+    };
+    reader.onerror = () => { infoEl.textContent = "Impossibile leggere il file selezionato."; };
+    reader.readAsText(file);
   });
 
   /* ================= Grafico SVG condiviso ================= */
