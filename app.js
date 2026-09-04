@@ -373,10 +373,27 @@
     });
   }
 
+  function getLastExercisePerformance(name) {
+    const candidates = days.filter(d => d.id !== currentDayId && d.exercises.some(e => e.name === name));
+    if (!candidates.length) return null;
+    candidates.sort((a, b) => {
+      const cmp = (b.date || "").localeCompare(a.date || "");
+      if (cmp !== 0) return cmp;
+      return (b.id || "").localeCompare(a.id || "");
+    });
+    const day = candidates[0];
+    const ex = [...day.exercises].reverse().find(e => e.name === name);
+    if (!ex || !ex.sets.length) return null;
+    const filled = ex.sets.filter(s => s.reps !== "" || s.weight !== "");
+    const last = filled[filled.length - 1] || ex.sets[ex.sets.length - 1];
+    return { reps: last.reps || "", weight: last.weight || "" };
+  }
+
   function addExerciseToCurrentDay(name) {
     const day = getCurrentDay();
     if (!day) return;
-    const newEx = { id: uid(), name, note: "", sets: [{ reps: "", weight: "" }] };
+    const prev = getLastExercisePerformance(name);
+    const newEx = { id: uid(), name, note: "", sets: [{ reps: prev ? prev.reps : "", weight: prev ? prev.weight : "" }] };
     if (isAngleExercise(name)) newEx.angle = "0";
     day.exercises.push(newEx);
     saveDays();
@@ -612,7 +629,12 @@
 
       card.querySelector(".add-set-btn").addEventListener("click", () => {
         const last = ex.sets[ex.sets.length - 1];
-        ex.sets.push({ reps: "", weight: last ? last.weight : "" });
+        if (last && (last.reps !== "" || last.weight !== "")) {
+          ex.sets.push({ reps: last.reps, weight: last.weight });
+        } else {
+          const prev = getLastExercisePerformance(ex.name);
+          ex.sets.push({ reps: prev ? prev.reps : "", weight: prev ? prev.weight : "" });
+        }
         saveDays();
         renderExercises(day);
       });
