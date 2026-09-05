@@ -373,7 +373,7 @@
     });
   }
 
-  function getLastExercisePerformance(name) {
+  function getPreviousSetValue(name, setIndex) {
     const candidates = days.filter(d => d.id !== currentDayId && d.exercises.some(e => e.name === name));
     if (!candidates.length) return null;
     candidates.sort((a, b) => {
@@ -384,16 +384,15 @@
     const day = candidates[0];
     const ex = [...day.exercises].reverse().find(e => e.name === name);
     if (!ex || !ex.sets.length) return null;
-    const filled = ex.sets.filter(s => s.reps !== "" || s.weight !== "");
-    const last = filled[filled.length - 1] || ex.sets[ex.sets.length - 1];
-    return { reps: last.reps || "", weight: last.weight || "" };
+    const s = ex.sets[setIndex];
+    if (!s || (s.reps === "" && s.weight === "")) return null;
+    return { reps: s.reps || "", weight: s.weight || "" };
   }
 
   function addExerciseToCurrentDay(name) {
     const day = getCurrentDay();
     if (!day) return;
-    const prev = getLastExercisePerformance(name);
-    const newEx = { id: uid(), name, note: "", sets: [{ reps: prev ? prev.reps : "", weight: prev ? prev.weight : "" }] };
+    const newEx = { id: uid(), name, note: "", sets: [{ reps: "", weight: "" }] };
     if (isAngleExercise(name)) newEx.angle = "0";
     day.exercises.push(newEx);
     saveDays();
@@ -530,16 +529,23 @@
       `<div class="mark ${i < doneCount ? "filled" : ""}"></div>`
     ).join("");
 
-    const rows = ex.sets.map((s, i) => `
+    const rows = ex.sets.map((s, i) => {
+      const prev = getPreviousSetValue(ex.name, i);
+      const prevW = prev && prev.weight !== "" ? prev.weight : "\u2013";
+      const prevR = prev && prev.reps !== "" ? prev.reps : "\u2013";
+      const prevLabel = prev ? `${prevW}×${prevR}` : "\u2013";
+      return `
       <tr data-set-index="${i}">
         <td class="set-num">${i + 1}</td>
+        <td class="set-prev">${prevLabel}</td>
         <td><input type="number" inputmode="numeric" min="0" class="set-reps" placeholder="reps" value="${s.reps}"></td>
         <td><input type="number" inputmode="decimal" min="0" step="0.5" class="set-weight" placeholder="kg" value="${s.weight}"></td>
         <td>
           <button class="remove-set" title="Rimuovi serie">${ICON_X}</button>
         </td>
       </tr>
-    `).join("");
+    `;
+    }).join("");
 
     const checkboxHtml = `<div class="select-checkbox ${isSelected ? "checked" : ""}">${isSelected ? ICON_CHECK : ""}</div>`;
     const handleHtml = showHandle ? dragHandleHtml(ex.id) : "";
@@ -576,6 +582,7 @@
           <thead>
             <tr>
               <th class="num-col">Serie</th>
+              <th class="prev-col">Prec.</th>
               <th>Reps</th>
               <th>Kg</th>
               <th class="action-col"></th>
@@ -628,13 +635,7 @@
       });
 
       card.querySelector(".add-set-btn").addEventListener("click", () => {
-        const last = ex.sets[ex.sets.length - 1];
-        if (last && (last.reps !== "" || last.weight !== "")) {
-          ex.sets.push({ reps: last.reps, weight: last.weight });
-        } else {
-          const prev = getLastExercisePerformance(ex.name);
-          ex.sets.push({ reps: prev ? prev.reps : "", weight: prev ? prev.weight : "" });
-        }
+        ex.sets.push({ reps: "", weight: "" });
         saveDays();
         renderExercises(day);
       });
