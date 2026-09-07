@@ -538,8 +538,8 @@
       <tr data-set-index="${i}">
         <td class="set-num">${i + 1}</td>
         <td class="set-prev">${prevLabel}</td>
-        <td><input type="number" inputmode="numeric" min="0" class="set-reps" placeholder="reps" value="${s.reps}"></td>
         <td><input type="number" inputmode="decimal" min="0" step="0.5" class="set-weight" placeholder="kg" value="${s.weight}"></td>
+        <td><input type="number" inputmode="numeric" min="0" class="set-reps" placeholder="reps" value="${s.reps}"></td>
         <td>
           <button class="remove-set" title="Rimuovi serie">${ICON_X}</button>
         </td>
@@ -583,8 +583,8 @@
             <tr>
               <th class="num-col">Serie</th>
               <th class="prev-col">Prec.</th>
-              <th>Reps</th>
               <th>Kg</th>
+              <th>Reps</th>
               <th class="action-col"></th>
             </tr>
           </thead>
@@ -1279,7 +1279,7 @@
     drawHeaderBand();
     y = HEADER_H + 32;
 
-    const colX = { badge: marginX, name: marginX + 26, num: marginX + 6, reps: marginX + 90, weight: marginX + 190 };
+    const colX = { badge: marginX, name: marginX + 26, num: marginX + 6, weight: marginX + 90, reps: marginX + 190 };
     const tableRight = pageW - marginX;
 
     const seen = new Set();
@@ -1332,8 +1332,8 @@
         doc.setFontSize(8.5);
         doc.setTextColor(...GREY);
         doc.text("SERIE", colX.num, y + 1);
-        doc.text("REPS", colX.reps, y + 1);
         doc.text("KG", colX.weight, y + 1);
+        doc.text("REPS", colX.reps, y + 1);
         y += 15;
 
         doc.setFont("helvetica", "normal");
@@ -1350,8 +1350,8 @@
           }
           doc.setTextColor(...INK);
           doc.text(String(i + 1), colX.num, y + 1);
-          doc.text(s.reps !== "" ? String(s.reps) : "\u2013", colX.reps, y + 1);
           doc.text(s.weight !== "" ? String(s.weight) + " kg" : "\u2013", colX.weight, y + 1);
+          doc.text(s.reps !== "" ? String(s.reps) : "\u2013", colX.reps, y + 1);
           y += 15;
         });
 
