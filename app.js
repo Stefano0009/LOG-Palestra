@@ -5,7 +5,7 @@
   const EXERCISE_GROUPS = {
     "Gambe": ["Stacco", "Squat con bilanciere", "Squat su box", "Affondi", "Affondi con manubri", "Step up con manubri", "Leg extension", "Pressa orizzontale"],
     "Dorso": ["Trazioni", "Pulley", "Lat machine con triangolo", "Lat machine avanti", "Rowing machine"],
-    "Petto": ["Panca", "Piegamenti declinati", "Piegamenti a terra", "Piegamenti facilitati", "Croci ai cavi"],
+    "Petto": ["Panca", "Panca con bilanciere", "Piegamenti declinati", "Piegamenti a terra", "Piegamenti facilitati", "Croci ai cavi"],
     "Spalle": ["Military press", "Alzate laterali"],
     "Braccia": ["Push down", "Hammer curl", "Curl ez"],
     "Addome": ["Crunch", "Reverse Crunch", "Russian Twist"]
@@ -29,7 +29,7 @@
   }
 
   const ANGLE_OPTIONS = ["0", "20", "30", "60", "90"];
-  const ANGLE_EXERCISES = new Set(["Panca"]);
+  const ANGLE_EXERCISES = new Set(["Panca", "Panca con bilanciere"]);
   function isAngleExercise(name) {
     return ANGLE_EXERCISES.has(name);
   }
