@@ -1013,7 +1013,7 @@
       const firstOfMonth = new Date(year, m, 1);
       const startOffset = (firstOfMonth.getDay() + 6) % 7;
       const daysInMonth = new Date(year, m + 1, 0).getDate();
-      html += `<div class="cal-year-month"><div class="cal-year-month-label">${CAL_MONTHS[m]}</div><div class="cal-year-month-grid">`;
+      html += `<div class="cal-year-month"><div class="cal-year-month-label">${CAL_MONTHS_SHORT[m]}</div><div class="cal-year-month-grid">`;
       for (let i = 0; i < startOffset; i++) html += `<span class="cal-mini-cell empty"></span>`;
       for (let day = 1; day <= daysInMonth; day++) {
         const d = new Date(year, m, day);
