@@ -5,9 +5,9 @@
   const EXERCISE_GROUPS = {
     "Gambe": ["Stacco", "Squat con bilanciere", "Squat su box", "Affondi", "Affondi con manubri", "Step up con manubri", "Leg extension", "Pressa orizzontale"],
     "Dorso": ["Trazioni", "Pulley", "Lat machine con triangolo", "Lat machine avanti", "Rowing machine"],
-    "Petto": ["Panca", "Panca con bilanciere", "Piegamenti declinati", "Piegamenti a terra", "Piegamenti facilitati", "Croci ai cavi"],
+    "Petto": ["Panca", "Panca con bilanciere", "Piegamenti declinati", "Piegamenti a terra", "Piegamenti facilitati", "Croci ai cavi", "Croci con manubri"],
     "Spalle": ["Military press", "Alzate laterali"],
-    "Braccia": ["Push down", "Hammer curl", "Curl ez"],
+    "Braccia": ["Push down", "Hammer curl", "Curl ez", "Reverse curl"],
     "Addome": ["Crunch", "Reverse Crunch", "Russian Twist"]
   };
 
@@ -132,6 +132,7 @@
   const viewProgress = document.getElementById("view-progress");
   const viewBodyweight = document.getElementById("view-bodyweight");
   const viewBackup = document.getElementById("view-backup");
+  const viewCalendar = document.getElementById("view-calendar");
   const homeContent = document.getElementById("home-content");
   const homeEyebrow = document.getElementById("home-date-eyebrow");
   const fabNew = document.getElementById("fab-new");
@@ -143,7 +144,7 @@
   const dayNotesInput = document.getElementById("day-notes");
 
   /* ================= Router semplice ================= */
-  const ALL_VIEWS = [viewHome, viewDay, viewStats, viewProgress, viewBodyweight, viewBackup];
+  const ALL_VIEWS = [viewHome, viewDay, viewStats, viewProgress, viewBodyweight, viewBackup, viewCalendar];
   function hideAllViews() {
     ALL_VIEWS.forEach(v => v.classList.remove("active"));
   }
@@ -195,6 +196,14 @@
     document.getElementById("backup-info").textContent = "";
     if (pushHistory !== false) history.pushState({ view: "backup" }, "", "#backup");
   }
+  function showCalendar(pushHistory) {
+    hideAllViews();
+    viewCalendar.classList.add("active");
+    fabNew.classList.add("hidden");
+    calRefDate = new Date();
+    renderCalendar();
+    if (pushHistory !== false) history.pushState({ view: "calendar" }, "", "#calendar");
+  }
   window.addEventListener("popstate", (e) => {
     const st = e.state;
     if (st && st.view === "day") showDay(st.id, false);
@@ -202,6 +211,7 @@
     else if (st && st.view === "progress") showProgress(st.exercise, false);
     else if (st && st.view === "bodyweight") showBodyweight(false);
     else if (st && st.view === "backup") showBackup(false);
+    else if (st && st.view === "calendar") showCalendar(false);
     else showHome(false);
   });
 
@@ -798,6 +808,7 @@
   document.getElementById("btn-back-progress").addEventListener("click", () => history.back());
   document.getElementById("btn-back-bw").addEventListener("click", () => history.back());
   document.getElementById("btn-back-backup").addEventListener("click", () => history.back());
+  document.getElementById("btn-back-calendar").addEventListener("click", () => history.back());
 
   /* ================= Menu ================= */
   const modalMenu = document.getElementById("modal-menu");
@@ -806,6 +817,7 @@
     { action: "stats", name: "Statistiche", desc: "Riepilogo generale dei tuoi allenamenti" },
     { action: "progress", name: "Progressi esercizi", desc: "Andamento dei pesi nel tempo" },
     { action: "bodyweight", name: "Peso corporeo", desc: "Tieni traccia del tuo peso" },
+    { action: "calendar", name: "Calendario", desc: "Vista settimanale, mensile e annuale degli allenamenti" },
     { action: "backup", name: "Backup dati", desc: "Esporta o ripristina i tuoi dati" }
   ];
   menuList.innerHTML = MENU_ITEMS.map(m => `
@@ -825,6 +837,7 @@
       else if (action === "progress") showProgress(null, true);
       else if (action === "bodyweight") showBodyweight(true);
       else if (action === "backup") showBackup(true);
+      else if (action === "calendar") showCalendar(true);
     });
   });
   document.getElementById("btn-open-menu").addEventListener("click", () => modalMenu.classList.add("open"));
@@ -905,6 +918,153 @@
     };
     reader.onerror = () => { infoEl.textContent = "Impossibile leggere il file selezionato."; };
     reader.readAsText(file);
+  });
+
+  /* ================= Calendario ================= */
+  const CAL_WEEKDAYS = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
+  const CAL_MONTHS = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+  const CAL_MONTHS_SHORT = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
+  let calRange = "week";
+  let calRefDate = new Date();
+
+  function calISO(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+  function calStartOfWeek(d) {
+    const nd = new Date(d);
+    const dow = (nd.getDay() + 6) % 7; // 0 = lunedì
+    nd.setDate(nd.getDate() - dow);
+    nd.setHours(0, 0, 0, 0);
+    return nd;
+  }
+  function getWorkoutDatesSet() {
+    const set = new Set();
+    days.forEach(d => { if (d.date) set.add(d.date); });
+    return set;
+  }
+  function getFirstDayByDate(dateStr) {
+    return days.find(d => d.date === dateStr) || null;
+  }
+  function bindCalDayClicks(container) {
+    container.querySelectorAll("[data-date].has-workout").forEach(el => {
+      el.addEventListener("click", () => {
+        const day = getFirstDayByDate(el.dataset.date);
+        if (day) showDay(day.id, true);
+      });
+    });
+  }
+  function calDayCellHtml(d, workoutDates, todayStr, weekdayLabel) {
+    const iso = calISO(d);
+    const has = workoutDates.has(iso);
+    const isToday = iso === todayStr;
+    const cls = ["cal-day-cell"];
+    if (has) cls.push("has-workout");
+    if (isToday) cls.push("is-today");
+    return `
+      <div class="${cls.join(" ")}" data-date="${iso}">
+        ${weekdayLabel ? `<span class="cal-weekday">${weekdayLabel}</span>` : ""}
+        <span class="cal-daynum">${d.getDate()}</span>
+      </div>`;
+  }
+
+  function renderCalWeek(contentEl, labelEl, workoutDates, todayStr) {
+    const start = calStartOfWeek(calRefDate);
+    const end = new Date(start); end.setDate(end.getDate() + 6);
+    const sameMonth = start.getMonth() === end.getMonth();
+    labelEl.textContent = sameMonth
+      ? `${start.getDate()}\u2013${end.getDate()} ${CAL_MONTHS[end.getMonth()]} ${end.getFullYear()}`
+      : `${start.getDate()} ${CAL_MONTHS_SHORT[start.getMonth()]} \u2013 ${end.getDate()} ${CAL_MONTHS_SHORT[end.getMonth()]} ${end.getFullYear()}`;
+    let html = '<div class="cal-week-grid">';
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start); d.setDate(start.getDate() + i);
+      html += calDayCellHtml(d, workoutDates, todayStr, CAL_WEEKDAYS[i]);
+    }
+    html += "</div>";
+    contentEl.innerHTML = html;
+    bindCalDayClicks(contentEl);
+  }
+
+  function renderCalMonth(contentEl, labelEl, workoutDates, todayStr) {
+    const year = calRefDate.getFullYear();
+    const month = calRefDate.getMonth();
+    labelEl.textContent = `${CAL_MONTHS[month]} ${year}`;
+    const firstOfMonth = new Date(year, month, 1);
+    const startOffset = (firstOfMonth.getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    let html = '<div class="cal-weekday-row">' + CAL_WEEKDAYS.map(w => `<span>${w}</span>`).join("") + "</div>";
+    html += '<div class="cal-month-grid">';
+    for (let i = 0; i < startOffset; i++) html += `<div class="cal-day-cell empty"></div>`;
+    for (let day = 1; day <= daysInMonth; day++) {
+      html += calDayCellHtml(new Date(year, month, day), workoutDates, todayStr, null);
+    }
+    html += "</div>";
+    contentEl.innerHTML = html;
+    bindCalDayClicks(contentEl);
+  }
+
+  function renderCalYear(contentEl, labelEl, workoutDates, todayStr) {
+    const year = calRefDate.getFullYear();
+    labelEl.textContent = String(year);
+    let html = '<div class="cal-year-grid">';
+    for (let m = 0; m < 12; m++) {
+      const firstOfMonth = new Date(year, m, 1);
+      const startOffset = (firstOfMonth.getDay() + 6) % 7;
+      const daysInMonth = new Date(year, m + 1, 0).getDate();
+      html += `<div class="cal-year-month"><div class="cal-year-month-label">${CAL_MONTHS[m]}</div><div class="cal-year-month-grid">`;
+      for (let i = 0; i < startOffset; i++) html += `<span class="cal-mini-cell empty"></span>`;
+      for (let day = 1; day <= daysInMonth; day++) {
+        const d = new Date(year, m, day);
+        const iso = calISO(d);
+        const has = workoutDates.has(iso);
+        const isToday = iso === todayStr;
+        const cls = ["cal-mini-cell"];
+        if (has) cls.push("has-workout");
+        if (isToday) cls.push("is-today");
+        html += `<span class="${cls.join(" ")}" data-date="${iso}" title="${day} ${CAL_MONTHS_SHORT[m]}"></span>`;
+      }
+      html += "</div></div>";
+    }
+    html += "</div>";
+    contentEl.innerHTML = html;
+    bindCalDayClicks(contentEl);
+  }
+
+  function renderCalendar() {
+    const contentEl = document.getElementById("cal-content");
+    const labelEl = document.getElementById("cal-label");
+    const workoutDates = getWorkoutDatesSet();
+    const todayStr = todayISO();
+    if (calRange === "week") renderCalWeek(contentEl, labelEl, workoutDates, todayStr);
+    else if (calRange === "month") renderCalMonth(contentEl, labelEl, workoutDates, todayStr);
+    else renderCalYear(contentEl, labelEl, workoutDates, todayStr);
+  }
+
+  document.querySelectorAll(".cal-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".cal-tab").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      calRange = btn.dataset.range;
+      renderCalendar();
+    });
+  });
+  document.getElementById("cal-prev").addEventListener("click", () => {
+    const d = new Date(calRefDate);
+    if (calRange === "week") d.setDate(d.getDate() - 7);
+    else if (calRange === "month") d.setMonth(d.getMonth() - 1);
+    else d.setFullYear(d.getFullYear() - 1);
+    calRefDate = d;
+    renderCalendar();
+  });
+  document.getElementById("cal-next").addEventListener("click", () => {
+    const d = new Date(calRefDate);
+    if (calRange === "week") d.setDate(d.getDate() + 7);
+    else if (calRange === "month") d.setMonth(d.getMonth() + 1);
+    else d.setFullYear(d.getFullYear() + 1);
+    calRefDate = d;
+    renderCalendar();
   });
 
   /* ================= Grafico SVG condiviso ================= */
