@@ -721,14 +721,14 @@ body.dnd-active{user-select:none;-webkit-user-select:none;}
 .cal-month-grid .cal-day-cell.empty{background:none;border:none;cursor:default;}
 
 /* Anno */
-.cal-year-grid{display:flex;flex-direction:column;gap:18px;}
+.cal-year-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px 10px;}
 .cal-year-month-label{
   font-family:'Oswald',system-ui,sans-serif;text-transform:uppercase;letter-spacing:.03em;
-  font-weight:600;font-size:12.5px;color:var(--text-muted);margin-bottom:6px;
+  font-weight:600;font-size:11px;color:var(--text-muted);margin-bottom:5px;
 }
-.cal-year-month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.cal-year-month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2.5px;}
 .cal-mini-cell{
-  display:block;aspect-ratio:1/1;border-radius:4px;background:var(--surface);
+  display:block;aspect-ratio:1/1;border-radius:3px;background:var(--surface);
   border:1px solid var(--border);
 }
 .cal-mini-cell.empty{background:none;border:none;}
