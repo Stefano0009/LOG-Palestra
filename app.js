@@ -8,7 +8,7 @@
     "Petto": ["Panca", "Panca con bilanciere", "Piegamenti declinati", "Piegamenti a terra", "Piegamenti facilitati", "Croci ai cavi", "Croci con manubri"],
     "Spalle": ["Military press", "Alzate laterali"],
     "Braccia": ["Push down", "Hammer curl", "Curl ez", "Reverse curl"],
-    "Addome": ["Crunch", "Reverse Crunch", "Russian Twist"]
+    "Addome": ["Crunch", "Reverse Crunch", "Russian Twist", "Cable crunch"]
   };
 
   const EXERCISE_TO_GROUP = { "Addome": "Addome" };
@@ -383,8 +383,9 @@
     });
   }
 
-  function getPreviousSetValue(name, setIndex) {
-    const candidates = days.filter(d => d.id !== currentDayId && d.exercises.some(e => e.name === name));
+  function getPreviousSetValue(name, setIndex, angle) {
+    const matchesEx = (e) => e.name === name && (!isAngleExercise(name) || (e.angle || "0") === (angle || "0"));
+    const candidates = days.filter(d => d.id !== currentDayId && d.exercises.some(matchesEx));
     if (!candidates.length) return null;
     candidates.sort((a, b) => {
       const cmp = (b.date || "").localeCompare(a.date || "");
@@ -392,7 +393,7 @@
       return (b.id || "").localeCompare(a.id || "");
     });
     const day = candidates[0];
-    const ex = [...day.exercises].reverse().find(e => e.name === name);
+    const ex = [...day.exercises].reverse().find(matchesEx);
     if (!ex || !ex.sets.length) return null;
     const s = ex.sets[setIndex];
     if (!s || (s.reps === "" && s.weight === "")) return null;
@@ -540,7 +541,7 @@
     ).join("");
 
     const rows = ex.sets.map((s, i) => {
-      const prev = getPreviousSetValue(ex.name, i);
+      const prev = getPreviousSetValue(ex.name, i, ex.angle);
       const prevW = prev && prev.weight !== "" ? prev.weight : "\u2013";
       const prevR = prev && prev.reps !== "" ? prev.reps : "\u2013";
       const prevLabel = prev ? `${prevW}×${prevR}` : "\u2013";
@@ -681,6 +682,7 @@
         angleSelect.addEventListener("change", (e) => {
           ex.angle = e.target.value;
           saveDays();
+          renderExercises(day);
         });
       }
     });
