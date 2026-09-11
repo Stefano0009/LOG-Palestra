@@ -669,6 +669,82 @@ body.dnd-active{user-select:none;-webkit-user-select:none;}
   margin:6px 2px 2px;
 }
 
+/* ---------- Calendario ---------- */
+.cal-tabs{
+  display:flex;gap:6px;background:var(--surface);border:1px solid var(--border);
+  border-radius:100px;padding:4px;margin-bottom:16px;
+}
+.cal-tab{
+  flex:1;border:none;background:none;color:var(--text-muted);
+  font-family:'Inter',system-ui,sans-serif;font-size:13px;font-weight:600;
+  padding:8px 0;border-radius:100px;cursor:pointer;transition:background .15s ease,color .15s ease;
+}
+.cal-tab.active{background:var(--accent);color:#fff;}
+.cal-nav{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:14px;
+}
+.cal-nav-btn{
+  background:var(--surface);border:1px solid var(--border);color:var(--text);
+  width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex:none;
+}
+.cal-nav-btn svg{width:18px;height:18px;}
+.cal-nav-btn:active{background:var(--surface-2);}
+.cal-label{
+  font-family:'Oswald',system-ui,sans-serif;text-transform:uppercase;letter-spacing:.03em;
+  font-weight:600;font-size:15px;color:var(--text);
+}
+
+/* Settimana */
+.cal-week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.cal-day-cell{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:10px 0;cursor:default;
+}
+.cal-day-cell.has-workout{background:var(--accent-soft);border-color:var(--accent);cursor:pointer;}
+.cal-day-cell.is-today{box-shadow:0 0 0 1.5px var(--accent-strong) inset;}
+.cal-weekday{font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;}
+.cal-daynum{font-family:'JetBrains Mono';font-weight:700;font-size:15px;color:var(--text);}
+.cal-day-cell.has-workout .cal-weekday,
+.cal-day-cell.has-workout .cal-daynum{color:var(--accent-strong);}
+
+/* Mese */
+.cal-weekday-row{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:6px;}
+.cal-weekday-row span{
+  text-align:center;font-size:10.5px;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:.04em;
+}
+.cal-month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+.cal-month-grid .cal-day-cell{padding:8px 0;border-radius:9px;}
+.cal-month-grid .cal-day-cell.empty{background:none;border:none;cursor:default;}
+
+/* Anno */
+.cal-year-grid{display:flex;flex-direction:column;gap:18px;}
+.cal-year-month-label{
+  font-family:'Oswald',system-ui,sans-serif;text-transform:uppercase;letter-spacing:.03em;
+  font-weight:600;font-size:12.5px;color:var(--text-muted);margin-bottom:6px;
+}
+.cal-year-month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.cal-mini-cell{
+  display:block;aspect-ratio:1/1;border-radius:4px;background:var(--surface);
+  border:1px solid var(--border);
+}
+.cal-mini-cell.empty{background:none;border:none;}
+.cal-mini-cell.has-workout{background:var(--accent);border-color:var(--accent);cursor:pointer;}
+.cal-mini-cell.is-today{box-shadow:0 0 0 1.5px var(--accent-strong) inset;}
+
+.cal-legend{display:flex;gap:16px;margin-top:18px;}
+.cal-legend-item{
+  display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);
+}
+.cal-legend-dot{
+  width:10px;height:10px;border-radius:3px;background:var(--surface);border:1px solid var(--border);
+  display:inline-block;
+}
+.cal-legend-dot.has-workout{background:var(--accent);border-color:var(--accent);}
+
 /* ---------- Toast ---------- */
 #toast{
   position:fixed;left:50%;bottom:calc(100px + var(--safe-bottom));
@@ -778,6 +854,38 @@ body.dnd-active{user-select:none;-webkit-user-select:none;}
       </button>
       <input type="file" id="backup-file-input" accept="application/json,.json" style="display:none;">
       <div id="backup-info" class="modal-hint" style="margin-top:18px;"></div>
+    </div>
+  </div>
+
+  <!-- ===== CALENDARIO ===== -->
+  <div id="view-calendar" class="view">
+    <div class="topbar">
+      <button class="back-btn" id="btn-back-calendar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Indietro
+      </button>
+    </div>
+    <div style="padding:0 20px 50px;">
+      <h1 style="font-size:24px;margin-bottom:14px;">Calendario</h1>
+      <div class="cal-tabs">
+        <button class="cal-tab active" data-range="week">Settimana</button>
+        <button class="cal-tab" data-range="month">Mese</button>
+        <button class="cal-tab" data-range="year">Anno</button>
+      </div>
+      <div class="cal-nav">
+        <button id="cal-prev" class="cal-nav-btn" aria-label="Precedente">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span id="cal-label" class="cal-label"></span>
+        <button id="cal-next" class="cal-nav-btn" aria-label="Successivo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div id="cal-content"></div>
+      <div class="cal-legend">
+        <span class="cal-legend-item"><span class="cal-legend-dot has-workout"></span>Allenamento</span>
+        <span class="cal-legend-item"><span class="cal-legend-dot"></span>Nessuno</span>
+      </div>
     </div>
   </div>
 
