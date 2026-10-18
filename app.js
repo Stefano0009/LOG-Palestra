@@ -4,8 +4,8 @@
   /* ================= Dati esercizi ================= */
   const EXERCISE_GROUPS = {
     "Gambe": ["Stacco", "Squat con bilanciere", "Squat su box", "Affondi", "Affondi con manubri", "Step up con manubri", "Leg extension", "Pressa orizzontale"],
-    "Dorso": ["Trazioni", "Pulley", "Lat machine con triangolo", "Lat machine avanti", "Rowing machine"],
-    "Petto": ["Panca", "Panca con bilanciere", "Piegamenti declinati", "Piegamenti a terra", "Piegamenti facilitati", "Croci ai cavi", "Croci con manubri"],
+    "Dorso": ["Trazioni", "Pulley", "Lat machine con triangolo", "Lat machine avanti", "Rowing machine", "Australian pull up"],
+    "Petto": ["Panca", "Panca con bilanciere", "Piegamenti declinati", "Piegamenti a terra", "Piegamenti facilitati", "Croci ai cavi", "Croci con manubri", "Chest press"],
     "Spalle": ["Military press", "Alzate laterali"],
     "Braccia": ["Push down", "Hammer curl", "Curl ez", "Reverse curl"],
     "Addome": ["Crunch", "Reverse Crunch", "Russian Twist", "Cable crunch"]
@@ -33,6 +33,29 @@
   function isAngleExercise(name) {
     return ANGLE_EXERCISES.has(name);
   }
+
+  // Ladder a piramide (1,2,..,N,..,2,1) disponibile per le trazioni
+  const LADDER_EXERCISES = new Set(["Trazioni"]);
+  function isLadderExercise(name) {
+    return LADDER_EXERCISES.has(name);
+  }
+  const LADDER_DEFAULT_MAX = 5;
+  const LADDER_MIN = 2, LADDER_MAX = 20;
+  function ladderTargets(max) {
+    const t = [];
+    for (let i = 1; i <= max; i++) t.push(i);
+    for (let i = max - 1; i >= 1; i--) t.push(i);
+    return t;
+  }
+  function isSetLogged(s) {
+    return s.reps !== "" || s.weight !== "" || !!(s.rp && s.rp.reps !== "");
+  }
+  function rpRepsOf(s) {
+    if (!s.rp) return 0;
+    const r = parseInt(s.rp.reps, 10);
+    return isNaN(r) ? 0 : r;
+  }
+  const DEFAULT_RP_PAUSE = "30";
 
   const IMAGE_EXTS = ["jpg", "jpeg", "png", "webp"];
   function slugifyExerciseName(name) {
@@ -396,8 +419,9 @@
     const ex = [...day.exercises].reverse().find(matchesEx);
     if (!ex || !ex.sets.length) return null;
     const s = ex.sets[setIndex];
-    if (!s || (s.reps === "" && s.weight === "")) return null;
-    return { reps: s.reps || "", weight: s.weight || "" };
+    const rpReps = s ? rpRepsOf(s) : 0;
+    if (!s || (s.reps === "" && s.weight === "" && !rpReps)) return null;
+    return { reps: s.reps || "", weight: s.weight || "", rp: rpReps || "" };
   }
 
   function addExerciseToCurrentDay(name) {
@@ -534,7 +558,7 @@
     const cardClasses = ["exercise-card"];
     if (canSelect) cardClasses.push("selectable");
     if (isSelected) cardClasses.push("selected");
-    const doneCount = ex.sets.filter(s => s.reps !== "" || s.weight !== "").length;
+    const doneCount = ex.sets.filter(isSetLogged).length;
     const totalTallies = Math.max(ex.sets.length, doneCount);
     const tallies = Array.from({ length: totalTallies }).map((_, i) =>
       `<div class="mark ${i < doneCount ? "filled" : ""}"></div>`
@@ -544,19 +568,45 @@
       const prev = getPreviousSetValue(ex.name, i, ex.angle);
       const prevW = prev && prev.weight !== "" ? prev.weight : "\u2013";
       const prevR = prev && prev.reps !== "" ? prev.reps : "\u2013";
-      const prevLabel = prev ? `${prevW}×${prevR}` : "\u2013";
+      const prevLabel = prev ? `${prevW}×${prevR}${prev.rp ? "+" + prev.rp : ""}` : "\u2013";
+      const repsPlaceholder = s.target ? String(s.target) : "reps";
+      const rpOn = !!s.rp;
+      const rpRow = rpOn ? `
+      <tr class="rp-row" data-rp-index="${i}">
+        <td colspan="5">
+          <div class="rp-box">
+            <span class="rp-title">Rest-pause</span>
+            <label>pausa <input type="number" inputmode="numeric" min="0" class="rp-pause" value="${escapeHtml(s.rp.pause)}"> s</label>
+            <label>poi <input type="number" inputmode="numeric" min="0" class="rp-reps" placeholder="reps" value="${escapeHtml(s.rp.reps)}"></label>
+          </div>
+        </td>
+      </tr>` : "";
       return `
-      <tr data-set-index="${i}">
+      <tr class="set-row" data-set-index="${i}">
         <td class="set-num">${i + 1}</td>
         <td class="set-prev">${prevLabel}</td>
         <td><input type="number" inputmode="decimal" min="0" step="0.5" class="set-weight" placeholder="kg" value="${s.weight}"></td>
-        <td><input type="number" inputmode="numeric" min="0" class="set-reps" placeholder="reps" value="${s.reps}"></td>
-        <td>
+        <td><input type="number" inputmode="numeric" min="0" class="set-reps" placeholder="${repsPlaceholder}" value="${s.reps}"></td>
+        <td class="act">
+          <button class="rp-btn ${rpOn ? "on" : ""}" title="Rest-pause su questa serie">RP</button>
           <button class="remove-set" title="Rimuovi serie">${ICON_X}</button>
         </td>
-      </tr>
+      </tr>${rpRow}
     `;
     }).join("");
+
+    const ladderOn = !!ex.ladder;
+    const ladderHtml = (isLadderExercise(ex.name) && !circuitSelectMode) ? `
+        <div class="ladder-bar">
+          <button type="button" class="ladder-toggle ${ladderOn ? "on" : ""}">Ladder</button>
+          ${ladderOn ? `
+            <div class="ladder-stepper">
+              <button type="button" class="ladder-dec" aria-label="Meno">−</button>
+              <span>picco <b>${ex.ladder.max}</b></span>
+              <button type="button" class="ladder-inc" aria-label="Più">+</button>
+            </div>
+            <div class="ladder-seq">${ladderTargets(ex.ladder.max).join(" · ")}</div>` : ""}
+        </div>` : "";
 
     const checkboxHtml = `<div class="select-checkbox ${isSelected ? "checked" : ""}">${isSelected ? ICON_CHECK : ""}</div>`;
     const handleHtml = showHandle ? dragHandleHtml(ex.id) : "";
@@ -589,6 +639,7 @@
           ${!circuitSelectMode ? `<button class="remove-ex" title="Rimuovi esercizio">${ICON_TRASH}</button>` : ""}
         </div>
         <div class="tally">${tallies}</div>
+        ${ladderHtml}
         <table class="sets-table">
           <thead>
             <tr>
@@ -651,8 +702,66 @@
         renderExercises(day);
       });
 
-      card.querySelectorAll("tbody tr").forEach(row => {
+      const applyLadder = (newMax) => {
+        const old = ex.sets;
+        const targets = ladderTargets(newMax);
+        const lost = old.slice(targets.length).some(isSetLogged);
+        if (lost && !confirm("Alcune serie con dati verranno rimosse riducendo il picco. Continuare?")) return;
+        ex.ladder = { max: newMax };
+        ex.sets = targets.map((t, i) => {
+          const o = old[i];
+          const n = { reps: o ? o.reps : "", weight: o ? o.weight : "", target: t };
+          if (o && o.rp) n.rp = o.rp;
+          return n;
+        });
+        saveDays();
+        renderExercises(day);
+      };
+      const ladderToggle = card.querySelector(".ladder-toggle");
+      if (ladderToggle) {
+        ladderToggle.addEventListener("click", () => {
+          if (ex.ladder) {
+            delete ex.ladder;
+            ex.sets.forEach(st => { delete st.target; });
+            saveDays();
+            renderExercises(day);
+          } else {
+            applyLadder(LADDER_DEFAULT_MAX);
+          }
+        });
+        const dec = card.querySelector(".ladder-dec");
+        const inc = card.querySelector(".ladder-inc");
+        if (dec) dec.addEventListener("click", () => { if (ex.ladder.max > LADDER_MIN) applyLadder(ex.ladder.max - 1); });
+        if (inc) inc.addEventListener("click", () => { if (ex.ladder.max < LADDER_MAX) applyLadder(ex.ladder.max + 1); });
+      }
+
+      card.querySelectorAll("tbody tr.rp-row").forEach(row => {
+        const idx = Number(row.dataset.rpIndex);
+        row.querySelector(".rp-pause").addEventListener("input", (e) => {
+          if (ex.sets[idx].rp) ex.sets[idx].rp.pause = e.target.value;
+          saveDays();
+        });
+        row.querySelector(".rp-reps").addEventListener("input", (e) => {
+          if (ex.sets[idx].rp) ex.sets[idx].rp.reps = e.target.value;
+          saveDays();
+          updateTally(card, ex);
+        });
+      });
+
+      card.querySelectorAll("tbody tr.set-row").forEach(row => {
         const idx = Number(row.dataset.setIndex);
+
+        row.querySelector(".rp-btn").addEventListener("click", () => {
+          const st = ex.sets[idx];
+          if (st.rp) {
+            if (st.rp.reps !== "" && !confirm("Rimuovere il rest-pause da questa serie? Le ripetizioni inserite andranno perse.")) return;
+            delete st.rp;
+          } else {
+            st.rp = { pause: DEFAULT_RP_PAUSE, reps: "" };
+          }
+          saveDays();
+          renderExercises(day);
+        });
 
         row.querySelector(".set-reps").addEventListener("input", (e) => {
           ex.sets[idx].reps = e.target.value;
@@ -689,7 +798,7 @@
   }
 
   function updateTally(card, ex) {
-    const doneCount = ex.sets.filter(s => s.reps !== "" || s.weight !== "").length;
+    const doneCount = ex.sets.filter(isSetLogged).length;
     const marks = card.querySelectorAll(".tally .mark");
     marks.forEach((m, i) => m.classList.toggle("filled", i < doneCount));
   }
@@ -1114,8 +1223,8 @@
         ex.sets.forEach(s => {
           const w = parseFloat(s.weight);
           const r = parseInt(s.reps, 10);
-          if (s.reps !== "" || s.weight !== "") totalSets++;
-          if (!isNaN(w) && !isNaN(r)) totalVolume += w * r;
+          if (isSetLogged(s)) totalSets++;
+          if (!isNaN(w) && !isNaN(r)) totalVolume += w * (r + rpRepsOf(s));
         });
       });
     });
@@ -1170,7 +1279,7 @@
         const w = parseFloat(s.weight);
         const r = parseInt(s.reps, 10);
         if (!isNaN(w) && w > 0) hasWeight = true;
-        if (!isNaN(r)) hasReps = true;
+        if (!isNaN(r) || rpRepsOf(s) > 0) hasReps = true;
       });
     }));
     if (hasWeight) return "weight";
@@ -1181,7 +1290,7 @@
   function getLoggedExerciseNames() {
     const set = new Set();
     days.forEach(day => day.exercises.forEach(ex => {
-      const logged = ex.sets.some(s => s.weight !== "" || s.reps !== "");
+      const logged = ex.sets.some(isSetLogged);
       if (logged) set.add(ex.name);
     }));
     return Array.from(set).sort((a, b) => a.localeCompare(b, "it"));
@@ -1197,8 +1306,9 @@
         if (ex.name !== name) return;
         ex.sets.forEach(s => {
           if (metric === "reps") {
-            const r = parseInt(s.reps, 10);
-            if (!isNaN(r) && (best === null || r > best)) best = r;
+            const r0 = parseInt(s.reps, 10);
+            const r = (isNaN(r0) ? 0 : r0) + rpRepsOf(s);
+            if (r > 0 && (best === null || r > best)) best = r;
           } else {
             const w = parseFloat(s.weight);
             if (!isNaN(w) && (best === null || w > best)) best = w;
@@ -1474,16 +1584,21 @@
         const displayName = member.angle && member.angle !== "0" ? `${member.name} (${member.angle}°)` : member.name;
         doc.text(displayName, colX.name, y);
 
-        if (group.length > 1) {
-          const tagW = doc.getTextWidth("CIRCUITO") + 14;
-          const tagX = tableRight - tagW;
-          doc.setFillColor(...ACCENT_TINT);
-          doc.roundedRect(tagX, y - 12, tagW, 16, 8, 8, "F");
+        const tags = [];
+        if (group.length > 1) tags.push("CIRCUITO");
+        if (member.ladder) tags.push(`LADDER 1-${member.ladder.max}-1`);
+        let tagRight = tableRight;
+        tags.forEach(label => {
           doc.setFont("helvetica", "bold");
           doc.setFontSize(8);
+          const tagW = doc.getTextWidth(label) + 14;
+          const tagX = tagRight - tagW;
+          doc.setFillColor(...ACCENT_TINT);
+          doc.roundedRect(tagX, y - 12, tagW, 16, 8, 8, "F");
           doc.setTextColor(...ACCENT);
-          doc.text("CIRCUITO", tagX + 7, y - 1.5);
-        }
+          doc.text(label, tagX + 7, y - 1.5);
+          tagRight = tagX - 6;
+        });
 
         y += 16;
 
@@ -1501,7 +1616,7 @@
         doc.setFont("helvetica", "normal");
         doc.setFontSize(10.5);
 
-        const setsWithData = member.sets.filter(s => s.reps !== "" || s.weight !== "");
+        const setsWithData = member.sets.filter(isSetLogged);
         const setsToPrint = setsWithData.length ? setsWithData : member.sets;
 
         setsToPrint.forEach((s, i) => {
@@ -1513,7 +1628,11 @@
           doc.setTextColor(...INK);
           doc.text(String(i + 1), colX.num, y + 1);
           doc.text(s.weight !== "" ? String(s.weight) + " kg" : "\u2013", colX.weight, y + 1);
-          doc.text(s.reps !== "" ? String(s.reps) : "\u2013", colX.reps, y + 1);
+          let repsTxt = s.reps !== "" ? String(s.reps) : "\u2013";
+          if (s.rp && s.rp.reps !== "") {
+            repsTxt += ` + ${s.rp.reps} (RP${s.rp.pause !== "" ? " " + s.rp.pause + "s" : ""})`;
+          }
+          doc.text(repsTxt, colX.reps, y + 1);
           y += 15;
         });
 
