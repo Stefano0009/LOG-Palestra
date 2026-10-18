@@ -47,8 +47,14 @@
     for (let i = max - 1; i >= 1; i--) t.push(i);
     return t;
   }
+  // Esercizi con livello (perni del rack, 1-15) al posto dei kg
+  const LEVEL_EXERCISES = new Set(["Piegamenti facilitati", "Australian pull up"]);
+  function isLevelExercise(name) {
+    return LEVEL_EXERCISES.has(name);
+  }
+  const LEVEL_MAX = 15;
   function isSetLogged(s) {
-    return s.reps !== "" || s.weight !== "" || !!(s.rp && s.rp.reps !== "");
+    return s.reps !== "" || s.weight !== "" || (s.level !== undefined && s.level !== "") || !!(s.rp && s.rp.reps !== "");
   }
   function rpRepsOf(s) {
     if (!s.rp) return 0;
@@ -420,8 +426,8 @@
     if (!ex || !ex.sets.length) return null;
     const s = ex.sets[setIndex];
     const rpReps = s ? rpRepsOf(s) : 0;
-    if (!s || (s.reps === "" && s.weight === "" && !rpReps)) return null;
-    return { reps: s.reps || "", weight: s.weight || "", rp: rpReps || "" };
+    if (!s || (s.reps === "" && s.weight === "" && !s.level && !rpReps)) return null;
+    return { reps: s.reps || "", weight: s.weight || "", level: s.level || "", rp: rpReps || "" };
   }
 
   function addExerciseToCurrentDay(name) {
@@ -568,7 +574,12 @@
       const prev = getPreviousSetValue(ex.name, i, ex.angle);
       const prevW = prev && prev.weight !== "" ? prev.weight : "\u2013";
       const prevR = prev && prev.reps !== "" ? prev.reps : "\u2013";
-      const prevLabel = prev ? `${prevW}×${prevR}${prev.rp ? "+" + prev.rp : ""}` : "\u2013";
+      const levelEx = isLevelExercise(ex.name);
+      const prevFirst = levelEx ? (prev && prev.level !== "" ? `L${prev.level}` : "\u2013") : prevW;
+      const prevLabel = prev ? `${prevFirst}×${prevR}${prev.rp ? "+" + prev.rp : ""}` : "\u2013";
+      const loadCell = levelEx
+        ? `<td><select class="set-level" aria-label="Livello"><option value="">–</option>${Array.from({ length: LEVEL_MAX }, (_, k) => k + 1).map(n => `<option value="${n}" ${String(s.level) === String(n) ? "selected" : ""}>${n}</option>`).join("")}</select></td>`
+        : `<td><input type="number" inputmode="decimal" min="0" step="0.5" class="set-weight" placeholder="kg" value="${s.weight}"></td>`;
       const repsPlaceholder = s.target ? String(s.target) : "reps";
       const rpOn = !!s.rp;
       const rpRow = rpOn ? `
@@ -585,7 +596,7 @@
       <tr class="set-row" data-set-index="${i}">
         <td class="set-num">${i + 1}</td>
         <td class="set-prev">${prevLabel}</td>
-        <td><input type="number" inputmode="decimal" min="0" step="0.5" class="set-weight" placeholder="kg" value="${s.weight}"></td>
+        ${loadCell}
         <td><input type="number" inputmode="numeric" min="0" class="set-reps" placeholder="${repsPlaceholder}" value="${s.reps}"></td>
         <td class="act">
           <button class="rp-btn ${rpOn ? "on" : ""}" title="Rest-pause su questa serie">RP</button>
@@ -645,7 +656,7 @@
             <tr>
               <th class="num-col">Serie</th>
               <th class="prev-col">Prec.</th>
-              <th>Kg</th>
+              <th>${isLevelExercise(ex.name) ? "Livello" : "Kg"}</th>
               <th>Reps</th>
               <th class="action-col"></th>
             </tr>
@@ -768,8 +779,15 @@
           saveDays();
           updateTally(card, ex);
         });
-        row.querySelector(".set-weight").addEventListener("input", (e) => {
+        const weightEl = row.querySelector(".set-weight");
+        if (weightEl) weightEl.addEventListener("input", (e) => {
           ex.sets[idx].weight = e.target.value;
+          saveDays();
+          updateTally(card, ex);
+        });
+        const levelEl = row.querySelector(".set-level");
+        if (levelEl) levelEl.addEventListener("change", (e) => {
+          ex.sets[idx].level = e.target.value;
           saveDays();
           updateTally(card, ex);
         });
@@ -1609,7 +1627,7 @@
         doc.setFontSize(8.5);
         doc.setTextColor(...GREY);
         doc.text("SERIE", colX.num, y + 1);
-        doc.text("KG", colX.weight, y + 1);
+        doc.text(isLevelExercise(member.name) ? "LIVELLO" : "KG", colX.weight, y + 1);
         doc.text("REPS", colX.reps, y + 1);
         y += 15;
 
@@ -1627,7 +1645,10 @@
           }
           doc.setTextColor(...INK);
           doc.text(String(i + 1), colX.num, y + 1);
-          doc.text(s.weight !== "" ? String(s.weight) + " kg" : "\u2013", colX.weight, y + 1);
+          const loadTxt = isLevelExercise(member.name)
+            ? (s.level !== undefined && s.level !== "" ? "Liv. " + s.level : "\u2013")
+            : (s.weight !== "" ? String(s.weight) + " kg" : "\u2013");
+          doc.text(loadTxt, colX.weight, y + 1);
           let repsTxt = s.reps !== "" ? String(s.reps) : "\u2013";
           if (s.rp && s.rp.reps !== "") {
             repsTxt += ` + ${s.rp.reps} (RP${s.rp.pause !== "" ? " " + s.rp.pause + "s" : ""})`;
