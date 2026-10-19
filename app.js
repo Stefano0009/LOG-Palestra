@@ -54,8 +54,14 @@
   }
   const LEVEL_MAX = 15;
   function isSetLogged(s) {
-    return s.reps !== "" || s.weight !== "" || (s.level !== undefined && s.level !== "") || !!(s.rp && s.rp.reps !== "");
+    return s.reps !== "" || s.weight !== "" || (s.level !== undefined && s.level !== "") || !!(s.rp && s.rp.reps !== "") || !!(s.ds && (s.ds.reps !== "" || s.ds.weight !== "" || s.ds.level !== ""));
   }
+  function dsRepsOf(s) {
+    if (!s.ds) return 0;
+    const r = parseInt(s.ds.reps, 10);
+    return isNaN(r) ? 0 : r;
+  }
+  function newDropSet() { return { weight: "", level: "", reps: "" }; }
   function rpRepsOf(s) {
     if (!s.rp) return 0;
     const r = parseInt(s.rp.reps, 10);
@@ -426,8 +432,12 @@
     if (!ex || !ex.sets.length) return null;
     const s = ex.sets[setIndex];
     const rpReps = s ? rpRepsOf(s) : 0;
-    if (!s || (s.reps === "" && s.weight === "" && !s.level && !rpReps)) return null;
-    return { reps: s.reps || "", weight: s.weight || "", level: s.level || "", rp: rpReps || "" };
+    const dsReps = s ? dsRepsOf(s) : 0;
+    if (!s || (s.reps === "" && s.weight === "" && !s.level && !rpReps && !dsReps)) return null;
+    return {
+      reps: s.reps || "", weight: s.weight || "", level: s.level || "", rp: rpReps || "",
+      ds: dsReps ? { weight: s.ds.weight || "", level: s.ds.level || "", reps: dsReps } : null
+    };
   }
 
   function addExerciseToCurrentDay(name) {
@@ -576,7 +586,11 @@
       const prevR = prev && prev.reps !== "" ? prev.reps : "\u2013";
       const levelEx = isLevelExercise(ex.name);
       const prevFirst = levelEx ? (prev && prev.level !== "" ? `L${prev.level}` : "\u2013") : prevW;
-      const prevLabel = prev ? `${prevFirst}×${prevR}${prev.rp ? "+" + prev.rp : ""}` : "\u2013";
+      let prevLabel = prev ? `${prevFirst}×${prevR}${prev.rp ? "+" + prev.rp : ""}` : "\u2013";
+      if (prev && prev.ds) {
+        const dsLoad = levelEx ? (prev.ds.level !== "" ? `L${prev.ds.level}` : "?") : (prev.ds.weight !== "" ? prev.ds.weight : "?");
+        prevLabel += `<br>↓${dsLoad}×${prev.ds.reps}`;
+      }
       const loadCell = levelEx
         ? `<td><select class="set-level" aria-label="Livello"><option value="">–</option>${Array.from({ length: LEVEL_MAX }, (_, k) => k + 1).map(n => `<option value="${n}" ${String(s.level) === String(n) ? "selected" : ""}>${n}</option>`).join("")}</select></td>`
         : `<td><input type="number" inputmode="decimal" min="0" step="0.5" class="set-weight" placeholder="kg" value="${s.weight}"></td>`;
@@ -592,6 +606,20 @@
           </div>
         </td>
       </tr>` : "";
+      const dsOn = !!s.ds;
+      const dsLoadInput = levelEx
+        ? `<label>livello <select class="ds-level"><option value="">–</option>${Array.from({ length: LEVEL_MAX }, (_, k) => k + 1).map(n => `<option value="${n}" ${s.ds && String(s.ds.level) === String(n) ? "selected" : ""}>${n}</option>`).join("")}</select></label>`
+        : `<label>kg <input type="number" inputmode="decimal" min="0" step="0.5" class="ds-weight" placeholder="kg" value="${s.ds ? escapeHtml(s.ds.weight) : ""}"></label>`;
+      const dsRow = dsOn ? `
+      <tr class="ds-row" data-ds-index="${i}">
+        <td colspan="5">
+          <div class="rp-box ds-box">
+            <span class="rp-title">Drop set</span>
+            ${dsLoadInput}
+            <label>reps <input type="number" inputmode="numeric" min="0" class="ds-reps" placeholder="reps" value="${escapeHtml(s.ds.reps)}"></label>
+          </div>
+        </td>
+      </tr>` : "";
       return `
       <tr class="set-row" data-set-index="${i}">
         <td class="set-num">${i + 1}</td>
@@ -600,9 +628,10 @@
         <td><input type="number" inputmode="numeric" min="0" class="set-reps" placeholder="${repsPlaceholder}" value="${s.reps}"></td>
         <td class="act">
           <button class="rp-btn ${rpOn ? "on" : ""}" title="Rest-pause su questa serie">RP</button>
+          <button class="rp-btn ds-btn ${dsOn ? "on" : ""}" title="Drop set su questa serie">DS</button>
           <button class="remove-set" title="Rimuovi serie">${ICON_X}</button>
         </td>
-      </tr>${rpRow}
+      </tr>${rpRow}${dsRow}
     `;
     }).join("");
 
@@ -759,10 +788,37 @@
         });
       });
 
+      card.querySelectorAll("tbody tr.ds-row").forEach(row => {
+        const idx = Number(row.dataset.dsIndex);
+        const dw = row.querySelector(".ds-weight");
+        const dl = row.querySelector(".ds-level");
+        const dr = row.querySelector(".ds-reps");
+        if (dw) dw.addEventListener("input", (e) => { if (ex.sets[idx].ds) ex.sets[idx].ds.weight = e.target.value; saveDays(); });
+        if (dl) dl.addEventListener("change", (e) => { if (ex.sets[idx].ds) ex.sets[idx].ds.level = e.target.value; saveDays(); });
+        dr.addEventListener("input", (e) => {
+          if (ex.sets[idx].ds) ex.sets[idx].ds.reps = e.target.value;
+          saveDays();
+          updateTally(card, ex);
+        });
+      });
+
       card.querySelectorAll("tbody tr.set-row").forEach(row => {
         const idx = Number(row.dataset.setIndex);
 
-        row.querySelector(".rp-btn").addEventListener("click", () => {
+        row.querySelector(".ds-btn").addEventListener("click", () => {
+          const st = ex.sets[idx];
+          if (st.ds) {
+            const hasData = st.ds.reps !== "" || st.ds.weight !== "" || st.ds.level !== "";
+            if (hasData && !confirm("Rimuovere il drop set da questa serie? I dati inseriti andranno persi.")) return;
+            delete st.ds;
+          } else {
+            st.ds = newDropSet();
+          }
+          saveDays();
+          renderExercises(day);
+        });
+
+        row.querySelector(".rp-btn:not(.ds-btn)").addEventListener("click", () => {
           const st = ex.sets[idx];
           if (st.rp) {
             if (st.rp.reps !== "" && !confirm("Rimuovere il rest-pause da questa serie? Le ripetizioni inserite andranno perse.")) return;
@@ -1243,6 +1299,10 @@
           const r = parseInt(s.reps, 10);
           if (isSetLogged(s)) totalSets++;
           if (!isNaN(w) && !isNaN(r)) totalVolume += w * (r + rpRepsOf(s));
+          if (s.ds) {
+            const dw = parseFloat(s.ds.weight), dr = parseInt(s.ds.reps, 10);
+            if (!isNaN(dw) && !isNaN(dr)) totalVolume += dw * dr;
+          }
         });
       });
     });
@@ -1297,7 +1357,7 @@
         const w = parseFloat(s.weight);
         const r = parseInt(s.reps, 10);
         if (!isNaN(w) && w > 0) hasWeight = true;
-        if (!isNaN(r) || rpRepsOf(s) > 0) hasReps = true;
+        if (!isNaN(r) || rpRepsOf(s) > 0 || dsRepsOf(s) > 0) hasReps = true;
       });
     }));
     if (hasWeight) return "weight";
@@ -1325,7 +1385,7 @@
         ex.sets.forEach(s => {
           if (metric === "reps") {
             const r0 = parseInt(s.reps, 10);
-            const r = (isNaN(r0) ? 0 : r0) + rpRepsOf(s);
+            const r = (isNaN(r0) ? 0 : r0) + rpRepsOf(s) + dsRepsOf(s);
             if (r > 0 && (best === null || r > best)) best = r;
           } else {
             const w = parseFloat(s.weight);
@@ -1655,6 +1715,21 @@
           }
           doc.text(repsTxt, colX.reps, y + 1);
           y += 15;
+          if (s.ds && (s.ds.reps !== "" || s.ds.weight !== "" || s.ds.level !== "")) {
+            ensureSpace(20);
+            doc.setFont("helvetica", "italic");
+            doc.setFontSize(9.5);
+            doc.setTextColor(...GREY);
+            doc.text("drop set", colX.num, y + 1);
+            const dsLoad = isLevelExercise(member.name)
+              ? (s.ds.level !== "" ? "Liv. " + s.ds.level : "\u2013")
+              : (s.ds.weight !== "" ? s.ds.weight + " kg" : "\u2013");
+            doc.text(dsLoad, colX.weight, y + 1);
+            doc.text(s.ds.reps !== "" ? String(s.ds.reps) : "\u2013", colX.reps, y + 1);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10.5);
+            y += 15;
+          }
         });
 
         if (member.note && member.note.trim()) {
