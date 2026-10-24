@@ -327,18 +327,19 @@ body.dnd-active{user-select:none;-webkit-user-select:none;}
   padding:0 16px 6px;
 }
 .sets-table th.num-col{width:34px;}
-.sets-table th.prev-col{width:64px;}
-.sets-table th.action-col{width:84px;}
+.sets-table th.prev-col{width:66px;}
+.sets-table th.action-col{width:80px;}
 .sets-table td{padding:4px 4px 4px 10px;min-width:0;}
 .sets-table td:first-child{padding-left:16px;}
-.sets-table td.act{white-space:nowrap;padding-left:2px;}
+
 .rp-btn{
   background:none;border:1px solid var(--border);color:var(--text-muted);
   border-radius:8px;font-family:'JetBrains Mono';font-size:10px;font-weight:700;
   padding:4px 4px;margin-right:1px;cursor:pointer;vertical-align:middle;
+  min-width:22px;height:28px;
 }
 .rp-btn.on{background:var(--accent-soft);color:var(--accent-strong);border-color:var(--accent);}
-.sets-table tr.rp-row td{padding:0 16px 8px;}
+.sets-table tr.rp-row td,.sets-table tr.ds-row td{padding:0 16px 8px;}
 .rp-box{
   display:flex;align-items:center;gap:10px;flex-wrap:wrap;
   background:var(--surface-2);border:1px dashed var(--accent);
@@ -366,7 +367,10 @@ body.dnd-active{user-select:none;-webkit-user-select:none;}
 }
 .ladder-stepper b{color:var(--text);font-family:'JetBrains Mono';}
 .ladder-seq{flex-basis:100%;font-family:'JetBrains Mono';font-size:11px;color:var(--text-muted);}
-.sets-table td:last-child{padding-right:16px;}
+.sets-table td.act{white-space:nowrap;padding:4px 8px 4px 0;overflow:visible;}
+@media (max-width:350px){
+  .sets-table th.prev-col,.sets-table td.set-prev{display:none;}
+}
 .set-num{
   font-family:'JetBrains Mono';font-weight:700;color:var(--text-muted);
   font-size:14px;
@@ -381,7 +385,7 @@ body.dnd-active{user-select:none;-webkit-user-select:none;}
   border:1px solid var(--border);
   color:var(--text);
   border-radius:var(--radius-sm);
-  padding:9px 10px;
+  padding:9px 6px;
   font-family:'JetBrains Mono';
   font-size:15px;
   font-weight:500;
@@ -395,7 +399,7 @@ body.dnd-active{user-select:none;-webkit-user-select:none;}
 .sets-table select.set-level:focus{outline:none;border-color:var(--accent);}
 .remove-set{
   background:none;border:none;color:var(--text-muted);
-  padding:6px;cursor:pointer;line-height:0;
+  padding:6px 4px;width:24px;cursor:pointer;line-height:0;vertical-align:middle;
 }
 .remove-set svg{width:16px;height:16px;}
 
