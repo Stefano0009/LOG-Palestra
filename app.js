@@ -28,7 +28,7 @@
     return GROUP_ICONS[EXERCISE_TO_GROUP[exName]] || GROUP_ICONS["Addome"];
   }
 
-  const ANGLE_OPTIONS = ["0", "20", "30", "60", "90"];
+  const ANGLE_OPTIONS = ["0", "20", "30", "45", "60", "90"];
   const ANGLE_EXERCISES = new Set(["Panca", "Panca con bilanciere"]);
   function isAngleExercise(name) {
     return ANGLE_EXERCISES.has(name);
